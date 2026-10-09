@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Data &amp; citation · Milk Metabolite Database</title>
+<meta name="description" content="Examination of the Irish milk metabolome for improved prediction of milk processability and sustainability.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;1,400&family=Source+Sans+3:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="data" data-root="" >
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="wrap top-in">
+    <a class="brand" href="index.html"><img class="brand-logo" src="brand/logo.png" alt="" width="32" height="40"><span><b>MetaBó-Bainne</b><span class="brand-sub">Milk Metabolite Database</span></span></a>
+    <nav class="nav" aria-label="Main"><a href="index.html#studies">Studies</a><a href="metabolites/index.html">MetaBó-Cards</a><a href="data.html">Data &amp; citation</a><a class="ext" href="https://www.metabobainne.ie/">Project website ↗</a></nav>
+  </div>
+</header>
+<main id="main">
+
+<section class="page-head"><div class="wrap">
+  <p class="crumbs"><a href="index.html">Home</a> / Data &amp; citation</p>
+  <h1>Data &amp; citation</h1>
+  <p class="lede">Download the tables behind every chart, and cite the studies when you use them.</p>
+</div></section>
+<div class="wrap block">
+  <section class="panel"><div class="panel-head"><h2>Downloads</h2><p class="muted">Plain CSV, UTF-8, one row per value. Concentrations are in mM; values are mean ± SD as published.</p></div>
+  <div class="table-wrap"><table class="data"><thead><tr><th>File</th><th>Study</th><th>Contents</th></tr></thead><tbody><tr><td><a href="data/pasture-diet_means.csv" download>pasture-diet_means.csv</a></td><td>Diet study</td><td>Group means and standard deviations (mM), long format.</td></tr><tr><td><a href="data/pasture-diet_pvalues.csv" download>pasture-diet_pvalues.csv</a></td><td>Diet study</td><td>P-values for each effect, as reported (&lt;0.001 kept as text).</td></tr><tr><td><a href="data/seasonality_means.csv" download>seasonality_means.csv</a></td><td>Seasonality study</td><td>Group means and standard deviations (mM), long format.</td></tr><tr><td><a href="data/seasonality_by_season.csv" download>seasonality_by_season.csv</a></td><td>Seasonality study</td><td>Seasonal means and standard deviations (mM), including the whole-lactation mean.</td></tr><tr><td><a href="data/metabolites.csv" download>metabolites.csv</a></td><td>All studies</td><td>Metabolite list with class, a short description and the studies that measured it.</td></tr></tbody></table></div></section>
+  <section class="panel"><div class="panel-head"><h2>How to cite</h2></div><ul class="findings"><li>Rojas-Gómez P, Pariyani R, Bateman LM, Lynch D, Timlin M, Dineen M, McCarthy NA, et al. Effect of proportion of pasture in the cow diet and seasonality on the milk metabolome as determined by 1H-NMR. Journal of Dairy Science 108(5): 4659–4673 (2025). <a href="https://www.sciencedirect.com/science/article/pii/S0022030225001754">https://www.sciencedirect.com/science/article/pii/S0022030225001754</a></li><li>Rojas-Gómez P, Pariyani R, Dineen M, Lynch D, Bateman L, Roche E, Maguire AR, McCarthy NA, Murphy TB, O’Mahony JA, O’Callaghan TF. The MetaBó-Bainne Study: characterisation of the milk metabolome from a seasonal pasture-based dairy system using 1H-NMR spectroscopy. Food Chemistry (2026). <a href="https://doi.org/10.1016/j.foodchem.2026.149492">https://doi.org/10.1016/j.foodchem.2026.149492</a></li></ul><p>When citing or referencing data from this site, please acknowledge:</p><blockquote class="attrib" id="attrib">MetaBó-Bainne - The Pasture-Based Milk Metabolome Database (2021R568), funded by the Irish Department of Agriculture, Food and the Marine.</blockquote><p class="muted">and the relevant publication above for the data you use.</p><p>The database is open access for research, educational and non-commercial use with attribution. See the <a href="terms.html">Terms &amp; Conditions</a>.</p><p>Questions about the data: <a href="mailto:tom_ocallaghan@ucc.ie">tom_ocallaghan@ucc.ie</a></p></section>
+  <section class="panel"><div class="panel-head"><h2>Notes on the data</h2></div>
+  <ul class="findings">
+    <li>Metabolites were identified and quantified by ¹H-NMR spectroscopy.</li>
+    <li>P-values reported as &lt;0.001 are kept as text in the downloads. The interactive charts treat them as the smallest values when sorting.</li>
+    <li>The PCA plots on this site are computed from the published group means (log2-transformed, autoscaled) to give an overview. The published analyses used individual samples.</li>
+    <li>Metabolite descriptions on the MetaBó-Cards are short general summaries. Follow the HMDB, PubChem, ChEBI and KEGG links for full reference information.</li>
+  </ul></section>
+</div>
+</main>
+<footer class="foot">
+  <div class="wrap foot-in">
+    <div class="foot-main"><div><b>MetaBó-Bainne</b> · Milk Metabolite Database<br><span class="muted">Funded by the Irish Department of Agriculture, Food and the Marine (project reference 2021R568).</span></div><img class="partners" src="brand/partners.png" alt="University College Cork; Department of Agriculture, Food and the Marine; Teagasc" loading="lazy"></div>
+    <div class="muted"><a href="terms.html">Terms &amp; Conditions</a> · <a href="data.html">How to cite and download</a> · <a href="https://www.metabobainne.ie/">metabobainne.ie</a></div>
+  </div>
+</footer>
+<div class="tip" id="tip" role="status"></div>
+<dialog class="lightbox" id="lightbox" aria-label="Figure"><form method="dialog"><button class="lb-close" aria-label="Close">×</button></form><img alt=""><p class="lb-cap"></p></dialog>
+<script src="assets/d3.min.js"></script>
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
