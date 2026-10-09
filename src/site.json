@@ -105,6 +105,7 @@
     {
       "id": "seasonality",
       "kind": "timecourse",
+      "hide": ["pca"],
       "sheet": "seasonality study",
       "title": "Seasonality of the pasture-based milk metabolome",
       "short": "Seasonality study",
