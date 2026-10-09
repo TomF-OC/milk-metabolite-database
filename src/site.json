@@ -12,6 +12,7 @@
     {
       "id": "pasture-diet",
       "kind": "factorial",
+         "hide": ["pca", "drivers"],
       "sheet": "pasture based study",
       "title": "Pasture proportion in the diet",
       "short": "Diet study",
