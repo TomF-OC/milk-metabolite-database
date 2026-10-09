@@ -49,9 +49,30 @@ def plabel(v):
 # (no page, no charts, no data downloads, no figures). Preview it on your own computer with
 #   python3 build.py --show-hidden
 SHOW_HIDDEN = "--show-hidden" in sys.argv
-HIDDEN = [st for st in CFG["studies"] if st.get("visible", True) is False and not SHOW_HIDDEN]
+
+
+def folder_studies():
+    """Studies kept in their own folder: src/studies/<id>/study.json (published) or
+    drafts/<id>/study.json (on your computer only, never uploaded; hidden unless --show-hidden)."""
+    out = []
+    for base, visible in ((SRC / "studies", True), (ROOT / "drafts", False)):
+        for f in sorted(base.glob("*/study.json")) if base.exists() else []:
+            st = json.loads(f.read_text(encoding="utf-8"))
+            st["_dir"] = f.parent
+            st.setdefault("visible", visible)
+            if base.name == "drafts":
+                st["_draft"] = True
+            out.append(st)
+    return out
+
+
+ALL = CFG["studies"] + folder_studies()
+HIDDEN = [st for st in ALL if st.get("visible", True) is False and not SHOW_HIDDEN]
 for st in HIDDEN:
     print(f"hidden study (not published): {st['id']}")
+for st in ALL:
+    if st.get("_draft") and SHOW_HIDDEN:
+        print(f"draft study shown for preview only: {st['id']}")
 books = {}
 def sheet_rows(st):
     wbname = st.get("workbook", "Book1.xlsx")  # optional: a study can keep its data in its own .xlsx
@@ -59,9 +80,50 @@ def sheet_rows(st):
     if path not in books:
         books[path] = openpyxl.load_workbook(path, data_only=True)
     return list(books[path][st["sheet"]].iter_rows(values_only=True))
+
+
+def load_properties(st):
+    """A 'properties' study: monthly means of milk properties (properties.csv) and the
+    model coefficients that link them to metabolites (predictors.csv)."""
+    base = st["_dir"]
+    d = {k: v for k, v in st.items() if not k.startswith("_")}
+    raw = list(csv.DictReader(open(base / st.get("data", "properties.csv"), encoding="utf-8")))
+    labels = st.get("property_labels", {})
+    props, levels = [], list(dict.fromkeys(r["month"] for r in raw))
+    for name in dict.fromkeys(r["property"] for r in raw):
+        rs = [r for r in raw if r["property"] == name]
+        lab, unit = labels.get(name, [re.sub(r"\s*\(.*\)$", "", name), (re.findall(r"\((.*)\)$", name) or [""])[0]])
+        pts = [{"t": r["month"], "i": levels.index(r["month"]), "mean": float(r["mean"]), "sd": float(r["sd"]), "ms": r["mean"], "ss": r["sd"], "g": r["letters"]} for r in rs]
+        avg = sum(x["mean"] for x in pts) / len(pts)
+        for x in pts:
+            x["rel"] = round(x["mean"] / avg, 4)
+        hi = max(pts, key=lambda x: x["mean"]); lo = min(pts, key=lambda x: x["mean"])
+        props.append({"id": slug(lab), "name": name, "label": lab, "unit": unit, "group": rs[0]["group"], "milk": rs[0]["milk"],
+                      "p_month": rs[0]["p_month"], "p_source": rs[0].get("p_milk_source", ""), "peak": hi["t"], "low": lo["t"], "rows": pts})
+    pid = {p["name"]: p["id"] for p in props}
+    models = []
+    pr = list(csv.DictReader(open(base / st.get("predictors", "predictors.csv"), encoding="utf-8"))) if (base / st.get("predictors", "predictors.csv")).exists() else []
+    for name in dict.fromkeys(r["model"] for r in pr):
+        rs = [r for r in pr if r["model"] == name]
+        models.append({"name": name, "prop": pid.get(rs[0]["property"]), "r2m": float(rs[0]["r2_marginal"]), "r2c": float(rs[0]["r2_conditional"]),
+                       "terms": [{"x": r["predictor"], "type": r["type"], "b": float(r["beta"]), "bl": r["beta"], "p": pnum(r["p_value"]), "pl": r["p_value"]} for r in rs]})
+    d["levels"], d["props"], d["models"] = levels, props, models
+    d["groups"] = list(dict.fromkeys(p["group"] for p in props))
+    d["rows"] = [x for p in props for x in p["rows"]]
+    d["metabolites"] = sorted({t["x"] for m in models for t in m["terms"] if t["type"] == "metabolite"}, key=str.lower)
+    fig = lambda f: dict(f, file=f"figures/{st['id']}/{f['file']}")
+    d["figures"] = [fig(f) for f in st.get("figures", [])]
+    if st.get("design_figure"):
+        d["design_figure"] = fig(st["design_figure"])
+    return d
+
+
 studies = []
-for st in CFG["studies"]:
+for st in ALL:
     if st in HIDDEN:
+        continue
+    if st["kind"] == "properties":
+        studies.append(load_properties(st))
         continue
     rows = sheet_rows(st)
     d = dict(st)
@@ -145,6 +207,8 @@ def pca(labels, mets, cell):
 
 
 for s in studies:
+    if s["kind"] == "properties":
+        continue
     if s["kind"] == "timecourse":
         cell = {(r["t"], r["m"]): r["mean"] for r in s["rows"]}
         s["pca"] = pca(s["levels"], s["metabolites"], cell)
@@ -212,7 +276,10 @@ for d in ["figures", "brand"]:  # read from the repo root (figures/, brand/) and
     for base in (ROOT, SRC):
         if (base / d).exists():
             shutil.copytree(base / d, OUT / d, dirs_exist_ok=True)
-in_use = {(s.get("metabolite_figures") or {}).get("dir") for s in CFG["studies"] if s not in HIDDEN}
+for st in ALL:  # folder studies: <folder>/figures -> site/figures/<id>
+    if "_dir" in st and st not in HIDDEN and (st["_dir"] / "figures").exists():
+        shutil.copytree(st["_dir"] / "figures", OUT / "figures" / st["id"], dirs_exist_ok=True)
+in_use = {(s.get("metabolite_figures") or {}).get("dir") for s in ALL if s not in HIDDEN}
 for st in HIDDEN:  # keep a hidden study's figures off the website too
     for d in [f"figures/{st['id']}", (st.get("metabolite_figures") or {}).get("dir")]:
         if d and d not in in_use and (OUT / d).exists():
@@ -224,8 +291,27 @@ def fig_html(root, f, cls="fig"):
             f'<img src="{root}{E(f["file"])}" alt="{E(f.get("alt") or f.get("title", ""))}" loading="lazy" decoding="async"></a>'
             f'<figcaption>{("<b>" + E(f["title"]) + ".</b> ") if f.get("title") else ""}{E(f.get("caption", ""))}</figcaption></figure>')
 
+SHOW_DL = CFG.get("show_downloads", True) is not False  # "show_downloads": false in site.json hides every CSV download
 downloads = []
 for s in studies:
+    if s["kind"] == "properties":
+        fn = f"{s['id']}_monthly.csv"
+        with open(OUT / "data" / fn, "w", newline="", encoding="utf-8") as fh:
+            w = csv.writer(fh)
+            w.writerow(["property", "unit", "group", "milk", "month", "mean", "sd", "letters", "p_month", "p_milk_source"])
+            for p in s["props"]:
+                for r in p["rows"]:
+                    w.writerow([p["label"], p["unit"], p["group"], p["milk"], r["t"], r["ms"], r["ss"], r["g"], p["p_month"], p["p_source"]])
+        downloads.append((s, fn, "Monthly means and standard deviations of each property, with the letters that mark significant differences between months and the p-values."))
+        fn = f"{s['id']}_predictors.csv"
+        with open(OUT / "data" / fn, "w", newline="", encoding="utf-8") as fh:
+            w = csv.writer(fh)
+            w.writerow(["model", "r2_marginal", "r2_conditional", "predictor", "type", "beta", "p_value"])
+            for m in s["models"]:
+                for t in m["terms"]:
+                    w.writerow([m["name"], m["r2m"], m["r2c"], t["x"], t["type"], t["bl"], t["pl"]])
+        downloads.append((s, fn, "Linear mixed-effects model coefficients (β) and p-values for each candidate predictor, as reported."))
+        continue
     fn = f"{s['id']}_means.csv"
     with open(OUT / "data" / fn, "w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
@@ -263,13 +349,16 @@ with open(OUT / "data" / "metabolites.csv", "w", newline="", encoding="utf-8") a
 downloads.append((None, "metabolites.csv", "Metabolite list with class, a short description and the studies that measured it."))
 
 payload = {
-    "studies": [{k: v for k, v in s.items() if k not in ("sheet", "season_sheet")} for s in studies],
+    "studies": [{k: v for k, v in s.items() if k not in ("sheet", "season_sheet", "property_labels", "data", "predictors", "intro", "design", "findings", "figures", "design_figure", "rows")} if s["kind"] == "properties" else {k: v for k, v in s.items() if k not in ("sheet", "season_sheet")} for s in studies],
     "mets": [{"m": m, "slug": slug(m), "cls": meta[m]["class"], "role": meta[m]["short"], "mbb": meta[m].get("mbb_id", ""),
               "vip": [s.get("vip_label", "Key marker") for s in studies if m in s.get("vip_metabolites", [])],
               "studies": [s["id"] for s in studies if m in s["metabolites"]]} for m in all_mets],
     "classes": classes,
     "cross": cross,
 }
+if not SHOW_DL:  # no CSV files on the website at all
+    shutil.rmtree(OUT / "data")
+    downloads = []
 (OUT / "assets" / "data.js").write_text("window.MB=" + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n", encoding="utf-8")
 
 
@@ -302,7 +391,7 @@ def page(path, title, body, root, kind, extra="", desc=""):
 <footer class="foot">
   <div class="wrap foot-in">
     <div class="foot-main"><div><b>{E(CFG['project'])}</b> · {E(CFG['site_title'])}<br><span class="muted">{E(CFG['funding'])}</span></div>{('<img class="partners" src="' + root + E(CFG['partners_image']) + '" alt="' + E(CFG.get('partners_alt', 'Project partners')) + '" loading="lazy">') if CFG.get('partners_image') else ''}</div>
-    <div class="muted">{('<a href="' + root + 'terms.html">Terms &amp; Conditions</a> · ') if CFG.get('terms') else ''}<a href="{root}data.html">How to cite and download</a> · <a href="{E(CFG['project_url'])}">metabobainne.ie</a></div>
+    <div class="muted">{('<a href="' + root + 'terms.html">Terms &amp; Conditions</a> · ') if CFG.get('terms') else ''}<a href="{root}data.html">{'How to cite and download' if SHOW_DL else 'How to cite'}</a> · <a href="{E(CFG['project_url'])}">metabobainne.ie</a></div>
   </div>
 </footer>
 <div class="tip" id="tip" role="status"></div>
@@ -326,7 +415,14 @@ def cite_block(s):
     if not s.get("citation"):
         return ""
     link = f' <a href="{E(s["citation_url"])}">Read the paper ↗</a>' if s.get("citation_url") else ""
-    return f'<p class="cite">{E(s["citation"])}{link}</p>'
+    doi = f' <span class="doi">DOI: <a href="https://doi.org/{E(s["doi"])}">{E(s["doi"])}</a></span>' if s.get("doi") else ""
+    return f'<p class="cite">{E(s["citation"])}{doi}{link}</p>'
+
+
+def study_meta(s):
+    if s["kind"] == "properties":
+        return f"{len(s['props'])} milk properties · {len(s['models'])} prediction models · {len(s['metabolites'])} candidate metabolite predictors"
+    return f"{len(s['metabolites'])} metabolites · " + (f"{len(s['levels'])} months" if s["kind"] == "timecourse" else f"{len(s['b_levels'])} diets × {len(s['a_levels'])} seasons")
 
 
 # home
@@ -337,7 +433,7 @@ study_cards = "".join(f"""
     <h3>{E(s['title'])}</h3>
     <p>{E(s['summary'])}</p>
     <div class="study-viz" data-study-preview="{s['id']}" aria-hidden="true"></div>
-    <span class="study-meta">{len(s['metabolites'])} metabolites · {('%d months' % len(s['levels'])) if s['kind'] == 'timecourse' else ('%d diets × %d seasons' % (len(s['b_levels']), len(s['a_levels'])))}</span>
+    <span class="study-meta">{study_meta(s)}</span>
   </a>""" for s in studies)
 home = f"""
 <section class="hero">
@@ -382,6 +478,124 @@ home += f"""
 </section>"""
 page("index.html", f"{CFG['site_title']} · {CFG['project']}", home, "", "home")
 
+def dl_btn(fn):
+    return f'<a class="btn" href="../data/{fn}" download>Download CSV</a>' if SHOW_DL else ""
+
+
+def pfmt(pl):
+    return E(pl) if str(pl).startswith("<") else "= " + E(pl)
+
+
+def properties_page(s, head):
+    """Study page for a 'properties' study (milk properties by month + predictor models)."""
+    n_sig = sum(1 for p in s["props"] if pnum(p["p_month"]) < 0.05)
+    best = max(s["models"], key=lambda m: m["r2c"]) if s["models"] else None
+    tiles = [f'<div class="tile"><b class="num">{n_sig}</b><span>of {len(s["props"])} properties changed by month (p &lt; 0.05)</span></div>']
+    if s["models"]:
+        tiles.append(f'<div class="tile"><b class="num">{len(s["models"])}</b><span>prediction models, explaining up to {best["r2c"]:.0%} of the variation (R²c, {E(best["name"].lower())})</span></div>')
+        tiles.append(f'<div class="tile"><b class="num">{len(s["metabolites"])}</b><span>metabolites selected as candidate predictors in at least one model</span></div>')
+    rel = next((x for x in studies if x["id"] == s.get("related_study")), None)
+    overlay = ""
+    if rel:
+        overlay = f"""
+    <div class="sub-block">
+      <p class="sub-h">Compare with a metabolite from the <a href="{rel['id']}.html">{E(rel['short'].lower())}</a> (same milk samples)</p>
+      <div class="controls"><label for="ov-met">Metabolite</label><select id="ov-met"></select><span class="muted" id="ov-why"></span></div>
+      <ul class="legend" id="ov-legend"></ul>
+      <div class="chart" id="ov-chart" style="--h:240px"></div>
+      <p class="muted small">Both lines are shown relative to their own February–November average, so their shapes can be compared on one scale. This compares raw monthly means only and is not a statistical test. A metabolite can be a candidate predictor of a property in the models even when their monthly trends look different, because the models also account for season and the other predictors.</p>
+    </div>"""
+    # static monthly tables, one per group
+    tables = ""
+    for g in s["groups"]:
+        ps = [p for p in s["props"] if p["group"] == g]
+        has_src = any(p["p_source"] for p in ps)
+        th = "<tr><th>Property</th>" + "".join(f"<th>{E(t[:3])}</th>" for t in s["levels"]) + "<th>p month</th>" + ("<th>p milk source</th>" if has_src else "") + "</tr>"
+        tb = ""
+        for p in ps:
+            unit = f' <span class="unit">({E(p["unit"])})</span>' if p["unit"] else ""
+            cells = "".join(f'<td>{E(r["ms"])} <span class="sd">± {E(r["ss"])}</span><sup class="grp">{E(r["g"])}</sup></td>' for r in p["rows"])
+            pm = f'<td class="{"sig" if pnum(p["p_month"]) < 0.05 else "ns"}">{E(p["p_month"])}</td>'
+            psrc = (f'<td class="{"sig" if p["p_source"] and pnum(p["p_source"]) < 0.05 else "ns"}">{E(p["p_source"])}</td>') if has_src else ""
+            tb += f"<tr><th>{E(p['label'])}{unit}</th>{cells}{pm}{psrc}</tr>"
+        note = s.get("group_notes", {}).get(g, ps[0]["milk"])
+        tables += f'<h3 class="tbl-h">{E(g)} <span class="muted">· {E(note)}</span></h3><div class="table-wrap"><table class="data compact props"><thead>{th}</thead><tbody>{tb}</tbody></table></div>'
+    coef = ""
+    for m in s["models"]:
+        rows = ""
+        for t in m["terms"]:
+            nm = f'<a href="../metabolites/{slug(t["x"])}.html">{E(t["x"])}</a>' if t["type"] == "metabolite" and t["x"] in all_mets else E(t["x"])
+            rows += f'<tr><td>{nm}</td><td class="muted">{E(t["type"])}</td><td class="num">{E(t["bl"])}</td><td class="{"sig" if t["p"] < 0.05 else "ns"}">{E(t["pl"])}</td></tr>'
+        coef += f'<div class="coef"><h4>{E(m["name"])} <span class="muted">R²m {m["r2m"]:.2f} · R²c {m["r2c"]:.2f}</span></h4><table class="data compact"><thead><tr><th>Candidate predictor</th><th>Type</th><th>β</th><th>p</th></tr></thead><tbody>{rows}</tbody></table></div>'
+    figs = ""
+    if s.get("figures"):
+        figs = ('<section class="wrap block" id="figures" data-chart="figures"><div class="block-head"><h2>Published figures</h2>'
+                '<p class="muted">From the analysis of the individual milk samples. Click a figure to enlarge it.</p></div><div class="fig-grid wide">'
+                + "".join(fig_html("../", f) for f in s["figures"]) + "</div></section>")
+    pred = ""
+    if s["models"]:
+        pred = f"""
+<section class="wrap block" data-chart="predictors" id="predictors">
+  <div class="panel">
+    <div class="panel-head"><h2>Candidate metabolite predictors of processing</h2><p class="muted">{E(s.get('models_note', ''))} Bars show each candidate predictor's coefficient (β): to the right, more of it went with a higher value of the property; to the left, a lower value. Compare bars within one model only, because the scale of β differs between properties.</p></div>
+    <div class="chips" id="md-chips" role="group" aria-label="Choose a model"></div>
+    <p class="r2" id="md-r2"></p>
+    <ul class="legend" id="md-legend"></ul>
+    <div class="chart" id="md-chart" style="--h:360px"></div>
+    <p class="muted small" id="md-season"></p>
+  </div>
+</section>
+<section class="wrap block" data-chart="map">
+  <div class="panel">
+    <div class="panel-head"><h2>Candidate predictor map</h2><p class="muted">Each row is a candidate predictor and each column a model. Dot size shows how large the coefficient is compared with the others in the same model; colour shows the direction. Metabolites that recur across models stand out. Click a metabolite to open its MetaBó-Card.</p></div>
+    <ul class="legend" id="map-legend"></ul>
+    <div class="chart" id="map-chart" style="--h:600px"></div>
+  </div>
+</section>"""
+    dl = f'<a class="btn" href="../data/{s["id"]}_monthly.csv" download>Download CSV</a>'
+    if not SHOW_DL:
+        dl = ""
+    elif s["models"]:
+        dl += f' <a class="btn" href="../data/{s["id"]}_predictors.csv" download>Download model coefficients</a>'
+    coefs = f'<details class="coefs"><summary>Full model coefficient tables</summary><div class="coef-grid">{coef}</div></details>' if coef else ""
+    findings = "".join(f"<li>{E(f)}</li>" for f in s.get("findings", []))
+    dfig = fig_html("../", s["design_figure"]) if s.get("design_figure") else ""
+    return head + f"""
+<section class="wrap block">
+  <div class="tiles">{''.join(tiles)}</div>
+</section>
+<section class="wrap block grid2" id="findings">
+  <div class="panel"><div class="panel-head"><h2>Study design</h2></div><p>{E(s.get('design', ''))}</p>{dfig}</div>
+  <div class="panel"><div class="panel-head"><h2>Key findings</h2></div><ul class="findings">{findings}</ul></div>
+</section>
+<section class="wrap block" data-chart="year" id="year">
+  <div class="panel">
+    <div class="panel-head"><h2>Through the year</h2><p class="muted">Monthly mean ± SD. Months that share a letter were not significantly different from each other.</p></div>
+    <div class="controls"><label for="pr-sel">Property</label><select id="pr-sel"></select></div>
+    <div class="chips" id="pr-chips"></div>
+    <div class="chart" id="pr-chart" style="--h:300px"></div>
+    {overlay}
+  </div>
+</section>
+<section class="wrap block" data-chart="profile">
+  <div class="panel">
+    <div class="panel-head"><h2>Seasonal profile</h2><p class="muted">Every property against its own February–November average. Shading is scaled within each row, so compare months along a row rather than between rows. Click a row to chart it above.</p></div>
+    <div class="grad"><span>below average</span><span class="bar"></span><span>above average</span></div>
+    <div class="chart" id="pf-chart" style="--h:300px"></div>
+  </div>
+</section>
+{pred}
+{figs}
+<section class="wrap block" data-chart="tables">
+  <div class="panel">
+    <div class="panel-head"><h2>Monthly means</h2><p class="muted">Mean ± SD as published. Superscript letters mark months that differed significantly; months sharing a letter did not.</p></div>
+    <div class="controls">{dl}</div>
+    {tables}
+    {coefs}
+  </div>
+</section>"""
+
+
 # study pages
 for s in studies:
     root = "../"
@@ -394,7 +608,9 @@ for s in studies:
     {cite_block(s)}
   </div>
 </section>"""
-    if s["kind"] == "factorial":
+    if s["kind"] == "properties":
+        body = properties_page(s, head)
+    elif s["kind"] == "factorial":
         diets = "".join(f"""<article class="diet" style="--dc:var(--s{i + 1})"><h3><span class="code">{E(b)}</span> {E(s['level_names'].get(b, b))}</h3><p>{E(s['level_text'].get(b, ''))}</p></article>""" for i, b in enumerate(s["b_levels"]))
         tiles = "".join(f'<div class="tile"><b class="num">{c}</b><span>of {len(s["pvalues"])} metabolites changed by {E(n.lower())} (p &lt; 0.05)</span></div>' for n, c in zip(s["p_names"], s["sig_counts"]))
         body = head + f"""
@@ -444,7 +660,7 @@ for s in studies:
 <section class="wrap block" data-chart="pvalues">
   <div class="panel">
     <div class="panel-head"><h2>Significance table</h2><p class="muted">P-values as reported. Bold values are below 0.05. Sort by any column; metabolite names open their MetaBó-Card.</p></div>
-    <div class="controls"><input type="search" id="pv-q" placeholder="Search metabolites" aria-label="Search metabolites"><a class="btn" href="../data/{s['id']}_pvalues.csv" download>Download CSV</a></div>
+    <div class="controls"><input type="search" id="pv-q" placeholder="Search metabolites" aria-label="Search metabolites">{dl_btn(s['id'] + '_pvalues.csv')}</div>
     <div class="table-wrap"><table class="data" id="pv-table"></table></div>
   </div>
 </section>"""
@@ -455,7 +671,7 @@ for s in studies:
 <section class="wrap block" data-chart="by_season">
   <div class="panel">
     <div class="panel-head"><h2>By season</h2><p class="muted">{E(s.get('season_def', ''))} Mean ± SD in mM. Shading runs from each metabolite's lowest season (light) to its highest (dark).</p></div>
-    <div class="controls"><input type="search" id="ss-q" placeholder="Search metabolites" aria-label="Search metabolites"><a class="btn" href="../data/{s['id']}_by_season.csv" download>Download CSV</a></div>
+    <div class="controls"><input type="search" id="ss-q" placeholder="Search metabolites" aria-label="Search metabolites">{dl_btn(s['id'] + '_by_season.csv')}</div>
     <div class="table-wrap"><table class="data" id="ss-table"></table></div>
   </div>
 </section>"""
@@ -521,6 +737,21 @@ body = """
 <section class="wrap block"><div id="explorer" data-explorer="full"></div></section>"""
 page("metabolites/index.html", f"MetaBó-Cards · {CFG['site_title']}", body, "../", "index")
 
+
+def properties_card(s, m):
+    hits = [(md, t) for md in s["models"] for t in md["terms"] if t["x"] == m and t["type"] == "metabolite"]
+    rows = ""
+    for md, t in hits:
+        d = '<span class="dir up">▲ higher</span>' if t["b"] > 0 else '<span class="dir down">▼ lower</span>'
+        rows += f'<tr><td><a href="../studies/{s["id"]}.html#predictors">{E(md["name"])}</a></td><td>{d}</td><td class="num">{E(t["bl"])}</td><td class="{"sig" if t["p"] < 0.05 else "ns"}">{E(t["pl"])}</td><td class="num">{md["r2c"]:.2f}</td></tr>'
+    return f"""
+<section class="panel mc-sec" id="{s['id']}">
+  <div class="panel-head"><p class="eyebrow"><a href="../studies/{s['id']}.html">{E(s['short'])}</a></p><h2>Candidate predictor of milk processing properties</h2>
+  <p class="muted">{E(m)} was selected as a candidate predictor in {len(hits)} of the {len(s['models'])} linear mixed-effects models in this study. "Higher" means more {E(m[0].lower() + m[1:] if not any(c.isupper() for c in m[1:]) else m)} went with a higher value of the property, after accounting for the other candidate predictors. The size of β is comparable only within a model.</p></div>
+  <div class="table-wrap"><table class="data compact"><thead><tr><th>Model</th><th>Direction</th><th>β</th><th>p</th><th>Model R²c</th></tr></thead><tbody>{rows}</tbody></table></div>
+</section>"""
+
+
 # metabolite pages
 for k, m in enumerate(all_mets):
     sl = slug(m)
@@ -538,6 +769,9 @@ for k, m in enumerate(all_mets):
     secs = ""
     for s in studies:
         if m not in s["metabolites"]:
+            continue
+        if s["kind"] == "properties":
+            secs += properties_card(s, m)
             continue
         if s["kind"] == "factorial":
             rs = [r for r in s["rows"] if r["m"] == m]
@@ -616,7 +850,7 @@ for k, m in enumerate(all_mets):
 
 # data page
 rows = "".join(f'<tr><td><a href="data/{fn}" download>{fn}</a></td><td>{E(s["short"]) if s else "All studies"}</td><td>{E(d)}</td></tr>' for s, fn, d in downloads)
-cites = "".join(f'<li>{E(s["citation"])} <a href="{E(s["citation_url"])}">{E(s["citation_url"])}</a></li>' for s in studies if s.get("citation"))
+cites = "".join(f'<li>{E(s["citation"])}' + (f' DOI: <a href="https://doi.org/{E(s["doi"])}">{E(s["doi"])}</a>' if s.get("doi") else (f' <a href="{E(s["citation_url"])}">{E(s["citation_url"])}</a>' if s.get("citation_url") else "")) + '</li>' for s in studies if s.get("citation"))
 lic = ""
 if CFG.get("attribution"):
     lic += f'<p>When citing or referencing data from this site, please acknowledge:</p><blockquote class="attrib" id="attrib">{E(CFG["attribution"])}</blockquote><p class="muted">and the relevant publication above for the data you use.</p>'
@@ -626,20 +860,21 @@ elif CFG.get("license_name"):
     lic += f'<p>Data on this site are shared under <a href="{E(CFG["license_url"])}">{E(CFG["license_name"])}</a>.</p>'
 doi = f'<p>Dataset archive: <a href="https://doi.org/{E(CFG["dataset_doi"])}">doi:{E(CFG["dataset_doi"])}</a></p>' if CFG.get("dataset_doi") else ""
 contact = f'<p>Questions about the data: <a href="mailto:{E(CFG["contact_email"])}">{E(CFG["contact_email"])}</a></p>' if CFG.get("contact_email") else ""
+dl_panel = f'''  <section class="panel"><div class="panel-head"><h2>Downloads</h2><p class="muted">Plain CSV, UTF-8, one row per value. Concentrations are in mM; values are mean ± SD as published.</p></div>
+  <div class="table-wrap"><table class="data"><thead><tr><th>File</th><th>Study</th><th>Contents</th></tr></thead><tbody>{rows}</tbody></table></div></section>''' if SHOW_DL else ""
 body = f"""
 <section class="page-head"><div class="wrap">
   <p class="crumbs"><a href="index.html">Home</a> / Data &amp; citation</p>
   <h1>Data &amp; citation</h1>
-  <p class="lede">Download the tables behind every chart, and cite the studies when you use them.</p>
+  <p class="lede">{'Download the tables behind every chart, and cite the studies when you use them.' if SHOW_DL else 'How to cite the studies and the data on this site.'}</p>
 </div></section>
 <div class="wrap block">
-  <section class="panel"><div class="panel-head"><h2>Downloads</h2><p class="muted">Plain CSV, UTF-8, one row per value. Concentrations are in mM; values are mean ± SD as published.</p></div>
-  <div class="table-wrap"><table class="data"><thead><tr><th>File</th><th>Study</th><th>Contents</th></tr></thead><tbody>{rows}</tbody></table></div></section>
+{dl_panel}
   <section class="panel"><div class="panel-head"><h2>How to cite</h2></div><ul class="findings">{cites}</ul>{doi}{lic}{contact}</section>
   <section class="panel"><div class="panel-head"><h2>Notes on the data</h2></div>
   <ul class="findings">
     <li>Metabolites were identified and quantified by ¹H-NMR spectroscopy.</li>
-    <li>P-values reported as &lt;0.001 are kept as text in the downloads. The interactive charts treat them as the smallest values when sorting.</li>
+    <li>P-values reported as &lt;0.001 are kept as text in the tables. The interactive charts treat them as the smallest values when sorting.</li>
     <li>The PCA plots on this site are computed from the published group means (log2-transformed, autoscaled) to give an overview. The published analyses used individual samples.</li>
     <li>Metabolite descriptions on the MetaBó-Cards are short general summaries. Follow the HMDB, PubChem, ChEBI and KEGG links for full reference information.</li>
   </ul></section>

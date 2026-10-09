@@ -47,21 +47,28 @@ If a name is misspelt, nothing is hidden, and the build log on the Actions tab s
 
 ## Prepare a study before it goes public
 
-Add `"visible": false,` to a study's entry in `src/site.json`. The study is then left out of the website completely: it gets no page, no home-page card, no charts, nothing on the MetaBó-Cards, no CSV downloads and no figures. You can push as often as you like while you work on it. To publish it, change the line to `"visible": true,` (or delete it) and push.
+A study can live in its own folder instead of in `site.json` and `Book1.xlsx`:
 
-**Important:** this repository is public, so anything you commit can be downloaded from github.com even while the study is hidden from the website. If the data or figures are unpublished, keep them in a `drafts/` folder in this repository. That folder is listed in `.gitignore`, so it stays on your computer and is never uploaded:
+- `drafts/<study-id>/` is for unpublished work. This folder is listed in `.gitignore`, so it stays on your computer and is never uploaded to GitHub. It never appears on the public website.
+- `src/studies/<study-id>/` is for published studies. Moving a draft folder here, then committing and pushing, publishes it.
 
-1. Put the data in its own workbook, e.g. `drafts/housing-2027.xlsx`, and point the study at it:
-   ```
-   "visible": false,
-   "workbook": "drafts/housing-2027.xlsx",
-   "sheet": "Sheet1",
-   ```
-   The study's text in `site.json` will be public, so keep it vague (a working title) until you publish.
-2. Keep its figures in `drafts/figures/` for now.
-3. When the paper is out, move the workbook into `src/` and the figures into `figures/<study-id>/`. Then change `"workbook"` to e.g. `"housing-2027.xlsx"` (or move the sheet into `Book1.xlsx` and delete the `"workbook"` line), set `"visible": true` and push.
+Each study folder contains:
+- `study.json`: title, summary, design, findings, citation and figure captions, in the same fields as the studies in `src/site.json`.
+- The data files, e.g. `properties.csv` and `predictors.csv` for a study of milk properties.
+- `figures/`: the study's images, referred to in `study.json` by file name only.
 
-To preview a hidden study on your own computer before publishing, run `python3 build.py --show-hidden` and open `site/index.html`.
+Example: the techno-functional study (milk composition, pH, rennet gelation and heat stability through the year, plus the metabolite prediction models) is in `drafts/techno-functional/`. Its study type is `"kind": "properties"`.
+
+**To publish it once the paper is out:**
+1. Fill in `citation` and `citation_url` in `drafts/techno-functional/study.json`.
+2. Move the whole `techno-functional` folder from `drafts/` into `src/studies/`.
+3. Commit and push. It then gets its own study page, a card on the home page, a "Predicts milk processing properties" section on the MetaBó-Card of every metabolite in its models, and CSV downloads.
+
+To keep a study in `src/studies/` but hide it again, add `"visible": false,` to its `study.json`. For studies defined in `site.json`, the same `"visible": false,` line hides them; see the note on public files below.
+
+**Note:** this repository is public, so anything committed under `src/` or `figures/` can be downloaded from github.com even while the study is hidden from the website. Keep unpublished data in `drafts/` only.
+
+To preview drafts on your own computer, run `python3 build.py --show-hidden` and open `site/index.html`.
 
 ## Add a new study
 
@@ -98,6 +105,11 @@ Then open `site/index.html` in a browser. The `site/` folder is never committed,
 - `ID_CHECK.csv` lists places where the two studies' tables disagree on a metabolite ID. Fix them in `src/metabolites.csv`.
 - `.github/workflows/build-and-deploy.yml` is the automatic build and publish step.
 - `CNAME` records the custom domain `data.metabobainne.ie`.
+
+## Citations, DOIs and downloads
+
+- Each study's `doi` field in `src/site.json` (for example `"doi": "10.3168/jds.2024-26168"`) is shown beside its citation on the study page and on the Data & citation page.
+- `"show_downloads": false` near the top of `src/site.json` removes every CSV download from the website, including the Download buttons and the Downloads table. Change it to `true` to offer the CSV files again.
 
 ## Terms and archiving
 

@@ -151,7 +151,7 @@
       const { svg, fresh } = svgIn(node, W, H, opts.label || 'Diverging bar chart');
       const narrow = W < 420;
       const lw = narrow ? 0 : Math.min(measure(svg, opts.allLabels || items.map((d) => d.label)), 200);
-      const vr = opts.valueLabels ? measure(svg, ['0.05×', '20×']) + 10 : 6;
+      const vr = opts.valueLabels ? measure(svg, opts.valueSample || ['0.05×', '20×']) + 10 : 6;
       const x = d3.scaleLinear([-ext, ext], [lw + 12 + vr, W - vr]);
       const y = d3.scaleBand(items.map((d) => d.label), [2, H - 20]).padding(0.26);
       const intro = first && !reduce; first = false;
@@ -165,7 +165,7 @@
         .style('cursor', opts.onPick ? 'pointer' : null).on('click', (ev, d) => opts.onPick && opts.onPick(d));
       g.transition().duration(dur).ease(ease).style('opacity', 1).attr('transform', (d) => `translate(0,${y(d.label)})`);
       const bw = y.bandwidth();
-      g.select('rect').attr('height', bw).style('fill', (d) => (d.v >= 0 ? 'var(--pos)' : 'var(--neg)'))
+      g.select('rect').attr('height', bw).style('fill', (d) => (opts.fill && opts.fill(d)) || (d.v >= 0 ? 'var(--pos)' : 'var(--neg)'))
         .transition().duration(dur).delay((d, i) => (intro ? 40 * i : 0)).ease(intro ? d3.easeCubicOut : ease)
         .attr('x', (d) => Math.min(x(0), x(d.v))).attr('width', (d) => Math.max(1, Math.abs(x(d.v) - x(0))));
       g.select('.nm').attr('y', bw / 2).attr('x', lw + 4).attr('text-anchor', 'end').text((d) => d.label).style('display', narrow ? 'none' : null);
@@ -300,7 +300,15 @@
       const H = 120;
       node.replaceChildren();
       const svg = d3.select(node).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('preserveAspectRatio', 'none');
-      if (s.kind === 'timecourse') {
+      if (s.kind === 'properties') {
+        const ps = s.props.slice().sort((a, b) => d3.max(b.rows, (r) => Math.abs(Math.log2(r.rel))) - d3.max(a.rows, (r) => Math.abs(Math.log2(r.rel)))).slice(0, 5);
+        const x = d3.scaleLinear([0, s.levels.length - 1], [4, W - 4]);
+        const ext = d3.max(ps, (p) => d3.max(p.rows, (r) => Math.abs(Math.log2(r.rel))));
+        const y = d3.scaleLinear([-ext, ext], [H - 6, 6]);
+        const ln = d3.line().x((d) => x(d.i)).y((d) => y(Math.log2(d.rel)));
+        svg.selectAll('path').data(ps.map((p) => p.rows)).join('path').attr('d', ln).style('fill', 'none').style('stroke', (d, i) => SCOL(i)).attr('stroke-width', 2).attr('vector-effect', 'non-scaling-stroke')
+          .attr('pathLength', 1).attr('class', 'draw').style('--i', (d, i) => i * 3);
+      } else if (s.kind === 'timecourse') {
         const top = Object.entries(s.summary_by_met).sort((a, b) => b[1].swing - a[1].swing).slice(0, 6).map((d) => d[0]);
         const x = d3.scaleLinear([0, s.levels.length - 1], [4, W - 4]);
         const ext = d3.max(s.rows.filter((r) => top.includes(r.m)), (r) => Math.abs(r.l2m));
@@ -404,6 +412,12 @@
       if (!m.studies.includes(s.id)) continue;
       const box = el('div');
       box.append(el('span', null, s.short));
+      if (s.kind === 'properties') {
+        const n = s.models.filter((md) => md.terms.some((t) => t.x === m.m && t.type === 'metabolite')).length;
+        box.append(el('b', 'pred', `Candidate predictor · ${n} propert${n === 1 ? 'y' : 'ies'}`));
+        viz.append(box);
+        continue;
+      }
       const svg = d3.select(box).append('svg').attr('viewBox', '0 0 120 40').attr('aria-hidden', 'true');
       if (s.kind === 'timecourse') {
         const rs = s.rows.filter((r) => r.m === m.m);
@@ -685,6 +699,240 @@
     }
   }
 
+  // ------------------------------------------------------------ properties study page
+  // monthly mean ± SD line with the significance letters above each month
+  function propChart(node, opts = {}) {
+    let p = null, first = true;
+    const H = opts.height || 300;
+    const api = mount(node, (W, anim) => {
+      const { svg, fresh } = svgIn(node, W, H, 'Monthly mean with standard deviation band and significance letters');
+      if (fresh) ['grid', 'yl', 'xl', 'band', 'line', 'dots', 'let', 'hit'].forEach((c) => layer(svg, c));
+      const rows = p.rows;
+      const lo = d3.min(rows, (d) => d.mean - d.sd), hi = d3.max(rows, (d) => d.mean + d.sd);
+      const y = d3.scaleLinear([lo - (hi - lo) * 0.05, hi + (hi - lo) * 0.05], [H - 26, 30]).nice();
+      const ticks = y.ticks(5);
+      const tf = y.tickFormat(5);
+      const m = { l: Math.ceil(measure(svg, ticks.map(tf))) + 14, r: 10 };
+      const x = d3.scalePoint(rows.map((d) => d.t), [m.l, W - m.r]).padding(0.35);
+      const dur = anim && !fresh ? D(700) : 0;
+      const intro = first && !reduce; first = false;
+      layer(svg, 'grid').selectAll('line').data(ticks).join('line').attr('class', 'grid-l').attr('x1', m.l).attr('x2', W - m.r).transition().duration(dur).ease(ease).attr('y1', y).attr('y2', y);
+      layer(svg, 'yl').selectAll('text').data(ticks).join('text').attr('text-anchor', 'end').attr('dy', '0.32em').text(tf).transition().duration(dur).ease(ease).attr('x', m.l - 8).attr('y', y);
+      const every = W < 480 ? 2 : 1;
+      layer(svg, 'xl').selectAll('text').data(rows).join('text').attr('text-anchor', 'middle').attr('y', H - 6).attr('x', (d) => x(d.t)).text((d, i) => (i % every ? '' : d.t.slice(0, 3)));
+      const area = d3.area().x((d) => x(d.t)).y0((d) => y(d.mean - d.sd)).y1((d) => y(d.mean + d.sd));
+      const line = d3.line().x((d) => x(d.t)).y((d) => y(d.mean));
+      const band = layer(svg, 'band').selectAll('path').data([rows]).join('path').style('fill', 'var(--accent)').style('fill-opacity', 0.13);
+      const path = layer(svg, 'line').selectAll('path').data([rows]).join('path').style('fill', 'none').style('stroke', 'var(--accent)').attr('stroke-width', 2.25).attr('stroke-linejoin', 'round');
+      if (dur) { band.transition().duration(dur).ease(ease).attr('d', area); path.transition().duration(dur).ease(ease).attr('d', line); } else { band.attr('d', area); path.attr('d', line); }
+      if (intro) { path.attr('pathLength', 1).attr('stroke-dasharray', '1 1').attr('stroke-dashoffset', 1).transition().duration(1300).ease(d3.easeCubicOut).attr('stroke-dashoffset', 0).on('end', function () { d3.select(this).attr('stroke-dasharray', null).attr('pathLength', null); }); }
+      const dots = layer(svg, 'dots').selectAll('circle').data(rows, (d) => d.t).join('circle').attr('r', 3.5).style('fill', 'var(--surface)').style('stroke', 'var(--accent)').attr('stroke-width', 2).attr('cx', (d) => x(d.t));
+      const lets = layer(svg, 'let').selectAll('text').data(rows, (d) => d.t).join('text').attr('class', 'mono letters').attr('text-anchor', 'middle').attr('x', (d) => x(d.t)).text((d) => d.g);
+      if (dur) { dots.transition().duration(dur).ease(ease).attr('cy', (d) => y(d.mean)); lets.transition().duration(dur).ease(ease).attr('y', (d) => y(d.mean + d.sd) - 8); }
+      else { dots.attr('cy', (d) => y(d.mean)); lets.attr('y', (d) => y(d.mean + d.sd) - 8); }
+      if (intro) { dots.style('opacity', 0).transition().delay((d, i) => 110 * i).duration(250).style('opacity', 1); lets.style('opacity', 0).transition().delay((d, i) => 400 + 110 * i).duration(300).style('opacity', 1); }
+      layer(svg, 'hit').selectAll('rect').data(rows, (d) => d.t).join('rect').attr('x', (d) => x(d.t) - x.step() / 2).attr('width', x.step()).attr('y', 0).attr('height', H - 20).style('fill', 'transparent')
+        .on('mousemove', (ev, d) => tip.show(`${p.label} · ${d.t}`, [{ text: `${d.ms} ± ${d.ss}${p.unit ? ' ' + p.unit : ''}` }, { text: d.g ? `Group ${d.g.split('').join(', ')}` : '' }], ev)).on('mouseleave', tip.hide);
+    });
+    return { set(prop, anim) { p = prop; api.draw(anim); } };
+  }
+
+  // two series relative to their own average: [{label, color, pts:[{t, rel}]}]
+  function relLines(node, opts = {}) {
+    let series = [], levels = [];
+    const H = opts.height || 240;
+    const api = mount(node, (W, anim) => {
+      const { svg, fresh } = svgIn(node, W, H, 'Two series relative to their own average');
+      if (fresh) ['grid', 'yl', 'xl', 'lines', 'dots'].forEach((c) => layer(svg, c));
+      const all = series.flatMap((s) => s.pts.map((d) => d.rel));
+      const ext = Math.max(0.05, d3.max(all, (v) => Math.abs(v - 1)));
+      const y = d3.scaleLinear([1 - ext * 1.1, 1 + ext * 1.1], [H - 26, 10]).nice();
+      const ticks = y.ticks(5), tf = (v) => (Math.abs(v - 1) < 1e-9 ? 'average' : d3.format('+.0%')(v - 1));
+      const m = { l: Math.ceil(measure(svg, ticks.map(tf))) + 14, r: 10 };
+      const x = d3.scalePoint(levels, [m.l, W - m.r]).padding(0.35);
+      const dur = anim && !fresh ? D(650) : 0;
+      layer(svg, 'grid').selectAll('line').data(ticks).join('line').attr('class', (d) => (Math.abs(d - 1) < 1e-9 ? 'axis-l' : 'grid-l')).attr('x1', m.l).attr('x2', W - m.r).transition().duration(dur).attr('y1', y).attr('y2', y);
+      layer(svg, 'yl').selectAll('text').data(ticks).join('text').attr('text-anchor', 'end').attr('dy', '0.32em').text(tf).transition().duration(dur).attr('x', m.l - 8).attr('y', y);
+      const every = W < 480 ? 2 : 1;
+      layer(svg, 'xl').selectAll('text').data(levels).join('text').attr('text-anchor', 'middle').attr('y', H - 6).attr('x', (d) => x(d)).text((d, i) => (i % every ? '' : d.slice(0, 3)));
+      const ln = d3.line().x((d) => x(d.t)).y((d) => y(d.rel));
+      const paths = layer(svg, 'lines').selectAll('path').data(series, (d, i) => i).join('path').style('fill', 'none').style('stroke', (d) => d.color).attr('stroke-width', 2.25).attr('stroke-linejoin', 'round').attr('stroke-dasharray', (d) => d.dash || null);
+      if (dur) paths.transition().duration(dur).ease(ease).attr('d', (d) => ln(d.pts)); else paths.attr('d', (d) => ln(d.pts));
+      const dots = layer(svg, 'dots').selectAll('g').data(series, (d, i) => i).join('g').style('fill', (d) => d.color)
+        .selectAll('circle').data((d) => d.pts.map((pt) => ({ ...pt, s: d }))).join('circle').attr('r', 3.5).attr('cx', (d) => x(d.t))
+        .on('mousemove', (ev, d) => tip.show(`${d.s.label} · ${d.t}`, [{ color: d.s.color, text: `${d3.format('+.1%')(d.rel - 1)} vs its average` }, { text: d.raw || '' }], ev)).on('mouseleave', tip.hide);
+      if (dur) dots.transition().duration(dur).ease(ease).attr('cy', (d) => y(d.rel)); else dots.attr('cy', (d) => y(d.rel));
+    });
+    return { set(sr, lv, anim) { series = sr; levels = lv; api.draw(anim); } };
+  }
+
+  function propertiesPage(s) {
+    const P = s.props, L = s.levels;
+    const byId = new Map(P.map((p) => [p.id, p]));
+    const modelOf = (pid) => s.models.find((md) => md.prop === pid);
+    const rel = s.related_study ? study(s.related_study) : null;
+    const st = { p: (P.find((p) => /gel strength/i.test(p.label)) || P[0]).id, model: null, met: null, metPicked: false };
+    // property picker
+    const sel = $('#pr-sel');
+    sel.replaceChildren(...s.groups.map((g) => { const og = document.createElement('optgroup'); og.label = g; P.filter((p) => p.group === g).forEach((p) => og.append(new Option(p.label + (p.unit ? ` (${p.unit})` : ''), p.id))); return og; }));
+    const chart = propChart($('#pr-chart'), { height: 300 });
+    let ov = null;
+    const ovSel = $('#ov-met');
+    if (rel && ovSel) {
+      ov = relLines($('#ov-chart'), { height: 240 });
+      ovSel.addEventListener('change', () => { st.met = ovSel.value; st.metPicked = true; drawOverlay(true); });
+    }
+    function defaultMet(pid) {
+      const md = modelOf(pid);
+      const inRel = (x) => rel && rel.metabolites.includes(x);
+      if (md) { const t = md.terms.filter((t) => t.type === 'metabolite' && inRel(t.x)).sort((a, b) => Math.abs(b.b) - Math.abs(a.b))[0]; if (t) return { m: t.x, why: `The largest metabolite coefficient in the ${md.name.toLowerCase()} model (β ${t.bl}).` }; }
+      return { m: inRel('Citrate') ? 'Citrate' : rel.metabolites[0], why: '' };
+    }
+    function fillOverlayOptions() {
+      if (!ov) return;
+      const md = modelOf(st.p);
+      const preds = md ? md.terms.filter((t) => t.type === 'metabolite' && rel.metabolites.includes(t.x)).map((t) => t.x) : [];
+      const rest = rel.metabolites.filter((x) => !preds.includes(x)).sort((a, b) => a.localeCompare(b));
+      const groups = [];
+      if (preds.length) { const og = document.createElement('optgroup'); og.label = `Candidate predictors in the ${md.name.toLowerCase()} model`; preds.forEach((x) => og.append(new Option(x, x))); groups.push(og); }
+      const og2 = document.createElement('optgroup'); og2.label = 'All metabolites'; rest.forEach((x) => og2.append(new Option(x, x))); groups.push(og2);
+      ovSel.replaceChildren(...groups);
+    }
+    function drawOverlay(anim) {
+      if (!ov) return;
+      const p = byId.get(st.p);
+      if (!st.metPicked || !rel.metabolites.includes(st.met)) { const d = defaultMet(st.p); st.met = d.m; $('#ov-why').textContent = d.why; } else $('#ov-why').textContent = '';
+      ovSel.value = st.met;
+      const mr = rel.rows.filter((r) => r.m === st.met);
+      const series = [
+        { label: p.label, color: 'var(--accent)', pts: p.rows.map((r) => ({ t: r.t, rel: r.rel, raw: `${r.ms} ± ${r.ss}${p.unit ? ' ' + p.unit : ''}` })) },
+        { label: st.met, color: 'var(--s2)', dash: '5 4', pts: L.map((t) => { const r = mr.find((x) => x.t === t); return r ? { t, rel: Math.pow(2, r.l2m), raw: `${fmt(r.mean)} ± ${fmt(r.sd)} mM` } : null; }).filter(Boolean) },
+      ];
+      legend($('#ov-legend'), series.map((d) => [d.label, d.color]));
+      ov.set(series, L, anim);
+    }
+    function chips() {
+      const p = byId.get(st.p);
+      const c = [el('span', 'chip' + (+p.p_month.replace('<', '') < 0.05 ? ' sig' : ''), `Month p ${p.p_month.startsWith('<') ? p.p_month : '= ' + p.p_month}`)];
+      if (p.p_source) c.push(el('span', 'chip' + (+p.p_source.replace('<', '') < 0.05 ? ' sig' : ''), `Milk source p ${p.p_source.startsWith('<') ? p.p_source : '= ' + p.p_source}`));
+      c.push(el('span', 'chip', p.milk + ' milk'));
+      c.push(el('span', 'chip', `Peak ${p.peak} · lowest ${p.low}`));
+      const md = modelOf(p.id);
+      if (md) { const b = el('button', 'chip link', `${md.terms.filter((t) => t.type !== 'season').length} candidate predictors · see model ↓`); b.type = 'button'; b.addEventListener('click', () => { pickModel(md.name, true); $('#predictors')?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth' }); }); c.push(b); }
+      $('#pr-chips').replaceChildren(...c);
+    }
+    function showProp(anim) {
+      sel.value = st.p;
+      chart.set(byId.get(st.p), anim);
+      chips();
+      fillOverlayOptions();
+      drawOverlay(anim);
+      profileSel();
+      const md = modelOf(st.p); if (md && st.model && md.name !== st.model) pickModel(md.name, anim);
+    }
+    sel.addEventListener('change', () => { st.p = sel.value; st.metPicked = false; showProp(true); });
+
+    // seasonal profile heatmap (rows scaled within themselves)
+    const hnode = $('#pf-chart');
+    let heatSel = null;
+    const heat = mount(hnode, (W) => {
+      const rows = []; s.groups.forEach((g) => { rows.push({ head: g }); P.filter((p) => p.group === g).forEach((p) => rows.push(p)); });
+      const ch = 22, top = 20, H = top + rows.length * ch + 4;
+      hnode.style.setProperty('--h', H + 'px');
+      hnode.replaceChildren();
+      const svg = d3.select(hnode).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Each property by month against its own average');
+      const narrow = W < 480;
+      const lw = Math.min(measure(svg, P.map((p) => p.label)), narrow ? 120 : 220);
+      const x = d3.scaleBand(d3.range(L.length), [lw + 12, W]).paddingInner(0.08);
+      svg.append('g').selectAll('text').data(L).join('text').attr('x', (d, i) => x(i) + x.bandwidth() / 2).attr('y', 12).attr('text-anchor', 'middle').text((d) => (narrow ? d[0] : d.slice(0, 3)));
+      const g = svg.append('g').selectAll('g').data(rows).join('g').attr('transform', (d, i) => `translate(0,${top + i * ch})`);
+      g.filter((d) => d.head).append('text').attr('class', 'eyebrow-t').attr('x', 0).attr('y', ch / 2 + 4).text((d) => d.head.toUpperCase());
+      const pr = g.filter((d) => !d.head).style('cursor', 'pointer').on('click', (ev, p) => { st.p = p.id; st.metPicked = false; showProp(true); $('#pr-chart').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' }); });
+      pr.append('rect').attr('class', 'rowsel').attr('x', 0).attr('y', 0).attr('width', W).attr('height', ch).attr('rx', 4).style('fill', 'transparent');
+      pr.append('text').attr('x', lw).attr('y', ch / 2).attr('dy', '0.32em').attr('text-anchor', 'end').text((p) => (narrow && p.label.length > 16 ? p.label.slice(0, 14) + '…' : p.label));
+      pr.each(function (p) {
+        const mx = d3.max(p.rows, (r) => Math.abs(Math.log2(r.rel))) || 1;
+        d3.select(this).selectAll('rect.c').data(p.rows).join('rect').attr('class', 'c').attr('x', (r) => x(r.i)).attr('y', 2).attr('width', x.bandwidth()).attr('height', ch - 4).attr('rx', 2)
+          .style('fill', (r) => { const v = Math.log2(r.rel) / mx; return `color-mix(in srgb, ${v >= 0 ? 'var(--pos)' : 'var(--neg)'} ${Math.round(Math.abs(v) * 85)}%, var(--surface))`; })
+          .on('mousemove', (ev, r) => tip.show(`${p.label} · ${r.t}`, [{ text: `${r.ms} ± ${r.ss}${p.unit ? ' ' + p.unit : ''}` }, { text: `${d3.format('+.1%')(r.rel - 1)} vs its average` }], ev)).on('mouseleave', tip.hide);
+      });
+      heatSel = pr;
+      profileSel();
+    });
+    function profileSel() { if (heatSel) heatSel.select('rect.rowsel').style('fill', (p) => (p.id === st.p ? 'color-mix(in srgb, var(--accent) 10%, transparent)' : 'transparent')); }
+
+    // model coefficients
+    const mchips = $('#md-chips');
+    let bars = null;
+    if (mchips && s.models.length) {
+      mchips.replaceChildren(...s.models.map((md) => { const b = el('button', 'chip', md.name); b.type = 'button'; b.dataset.m = md.name; return b; }));
+      mchips.addEventListener('click', (e) => { const b = e.target.closest('button[data-m]'); if (b) pickModel(b.dataset.m, true); });
+      const macroFill = (d) => `color-mix(in srgb, ${d.v >= 0 ? 'var(--pos)' : 'var(--neg)'} 40%, var(--surface))`;
+      bars = divBars($('#md-chart'), { label: 'Model coefficients', rowH: 28, valueLabels: (d) => d.bl, valueSample: ['-11.901', '21.904'],
+        fill: (d) => (d.type === 'metabolite' ? null : macroFill(d)), tipText: (d) => `β = ${d.bl}, p ${d.pl.startsWith('<') ? d.pl : '= ' + d.pl}${d.type === 'metabolite' ? '' : ' · milk composition'}`,
+        onPick: (d) => { if (d.type === 'metabolite' && metBy.has(d.label)) location.href = `${ROOT}metabolites/${slug(d.label)}.html`; },
+        scale: (e) => [{ v: -e, l: '← lower value' }, { v: e, l: 'higher value →' }] });
+      legend($('#md-legend'), [['Metabolite, higher value', 'var(--pos)'], ['Metabolite, lower value', 'var(--neg)'], ['Milk composition: fat, protein, lactose, cells (lighter)', 'color-mix(in srgb, var(--muted) 45%, var(--surface))']]);
+    }
+    function pickModel(name, anim) {
+      if (!bars) return;
+      st.model = name;
+      const md = s.models.find((m) => m.name === name);
+      mchips.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.m === name)));
+      const items = md.terms.filter((t) => t.type !== 'season').map((t) => ({ label: t.x, v: t.b, bl: t.bl, pl: t.pl, type: t.type })).sort((a, b) => b.v - a.v);
+      $('#md-r2').innerHTML = `<b>${md.name}</b> · R²m <b class="num">${md.r2m.toFixed(2)}</b> · R²c <b class="num">${md.r2c.toFixed(2)}</b> · ${items.length} candidate predictors`;
+      const se = md.terms.filter((t) => t.type === 'season');
+      $('#md-season').textContent = se.length ? `The model also includes season terms (not drawn): ${se.map((t) => `${t.x.replace('season.L', 'linear').replace('season.Q', 'quadratic').replace('season.C', 'cubic')} β ${t.bl} (p ${t.pl.startsWith('<') ? t.pl : '= ' + t.pl})`).join(' · ')}.` : '';
+      bars.set(items, d3.max(items, (d) => Math.abs(d.v)) * 1.05, anim);
+    }
+    if (bars) { const md0 = modelOf(st.p) || s.models[0]; inView($('#md-chart'), () => { if (!st.model) pickModel(md0.name, false); else pickModel(st.model, false); }); }
+
+    // predictor map
+    const mnode = $('#map-chart');
+    if (mnode && s.models.length) {
+      legend($('#map-legend'), [['Higher value of the property', 'var(--pos)'], ['Lower value of the property', 'var(--neg)']]);
+      const short = (n) => n.replace('Time of maximum gelation', 'Time of max.').replace('Heat coagulation time', 'Heat coag. time').replace('Somatic cell count', 'Somatic cells');
+      const preds = new Map();
+      s.models.forEach((md) => md.terms.filter((t) => t.type !== 'season').forEach((t) => { if (!preds.has(t.x)) preds.set(t.x, { x: t.x, type: t.type, n: 0 }); preds.get(t.x).n++; }));
+      const order = [...preds.values()].sort((a, b) => (a.type === 'metabolite') - (b.type === 'metabolite') || b.n - a.n || a.x.localeCompare(b.x));
+      const maxB = new Map(s.models.map((md) => [md.name, d3.max(md.terms.filter((t) => t.type !== 'season'), (t) => Math.abs(t.b))]));
+      let mapFirst = true;
+      const map = mount(mnode, (W) => {
+        const rowH = 22, narrow = W < 560;
+        const head = narrow ? 92 : 46;
+        const H = head + order.length * rowH + 6;
+        mnode.style.setProperty('--h', H + 'px');
+        mnode.replaceChildren();
+        const svg = d3.select(mnode).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Candidate predictors by model');
+        const lw = Math.min(measure(svg, order.map((d) => d.x)), narrow ? 130 : 220);
+        const x = d3.scaleBand(s.models.map((m) => m.name), [lw + 16, W - 40]).padding(0.05);
+        const r = Math.min(10, x.bandwidth() / 2 - 2, rowH / 2 - 1);
+        const hd = svg.append('g').selectAll('text').data(s.models).join('text').attr('class', 'strong small-t')
+          .attr('transform', (m) => `translate(${x(m.name) + x.bandwidth() / 2},${head - 10})${narrow ? ' rotate(-40)' : ''}`).attr('text-anchor', narrow ? 'start' : 'middle').text((m) => short(m.name));
+        hd.append('title').text((m) => `${m.name} · R²c ${m.r2c.toFixed(2)}`);
+        svg.append('text').attr('class', 'mono').attr('x', W - 4).attr('y', head - 10).attr('text-anchor', 'end').text('models');
+        const intro = mapFirst && !reduce; mapFirst = false;
+        const g = svg.append('g').selectAll('g').data(order).join('g').attr('transform', (d, i) => `translate(0,${head + i * rowH})`);
+        g.append('rect').attr('x', 0).attr('width', W).attr('height', rowH).style('fill', (d, i) => (i % 2 ? 'transparent' : 'color-mix(in srgb, var(--line) 35%, transparent)')).attr('rx', 3);
+        const nm = g.append('a').attr('href', (d) => (d.type === 'metabolite' && metBy.has(d.x) ? `${ROOT}metabolites/${slug(d.x)}.html` : null));
+        nm.append('text').attr('x', lw + 4).attr('y', rowH / 2).attr('dy', '0.32em').attr('text-anchor', 'end').attr('class', (d) => (d.type === 'metabolite' ? 'strong' : 'muted-t')).text((d) => (narrow && d.x.length > 17 ? d.x.slice(0, 15) + '…' : d.x));
+        g.append('text').attr('class', 'mono').attr('x', W - 4).attr('y', rowH / 2).attr('dy', '0.32em').attr('text-anchor', 'end').text((d) => d.n);
+        g.each(function (d, i) {
+          const cells = s.models.map((md) => ({ md, t: md.terms.find((t) => t.x === d.x && t.type !== 'season') })).filter((c) => c.t);
+          d3.select(this).selectAll('circle').data(cells).join('circle').attr('cx', (c) => x(c.md.name) + x.bandwidth() / 2).attr('cy', rowH / 2)
+            .style('fill', (c) => (c.t.b >= 0 ? 'var(--pos)' : 'var(--neg)')).style('fill-opacity', d.type === 'metabolite' ? 1 : 0.45)
+            .on('mousemove', (ev, c) => tip.show(`${d.x} · ${c.md.name}`, [{ color: c.t.b >= 0 ? 'var(--pos)' : 'var(--neg)', text: `β = ${c.t.bl}, p ${c.t.pl.startsWith('<') ? c.t.pl : '= ' + c.t.pl}` }], ev)).on('mouseleave', tip.hide)
+            .attr('r', intro ? 0 : (c) => Math.max(2.5, r * Math.sqrt(Math.abs(c.t.b) / maxB.get(c.md.name))))
+            .transition().delay(intro ? 25 * i : 0).duration(intro ? D(450) : 0).ease(d3.easeBackOut).attr('r', (c) => Math.max(2.5, r * Math.sqrt(Math.abs(c.t.b) / maxB.get(c.md.name))));
+        });
+      });
+      inView(mnode, () => map.draw(false));
+    }
+
+    showProp(false);
+    inView(hnode, () => heat.draw(false));
+  }
+
   // ------------------------------------------------------------ metabolite page
   function metabolitePage(name) {
     document.querySelectorAll('[data-mc-chart]').forEach((node) => {
@@ -721,6 +969,6 @@
     if (MB.cross && $('#cross-chart')) crossChart($('#cross-chart'), MB.cross);
   }
   const ex = $('#explorer'); if (ex) explorer(ex);
-  if (page === 'study') { const s = study(body.dataset.study); if (s.kind === 'factorial') factorialPage(s); else timecoursePage(s); }
+  if (page === 'study') { const s = study(body.dataset.study); if (s.kind === 'properties') propertiesPage(s); else if (s.kind === 'factorial') factorialPage(s); else timecoursePage(s); }
   if (page === 'metabolite') metabolitePage(body.dataset.met);
 })();

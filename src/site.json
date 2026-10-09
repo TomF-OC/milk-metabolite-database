@@ -7,6 +7,7 @@
   "license_name": "MetaBó-Bainne Terms & Conditions",
   "license_url": "terms.html",
   "dataset_doi": "",
+  "show_downloads": false,
   "contact_email": "tom_ocallaghan@ucc.ie",
   "studies": [
     {
@@ -36,7 +37,8 @@
         "Hippurate was the most distinctive marker of diet, rising in proportion to the amount of pasture (AUC = 1.0 for GRS vs TMR)."
       ],
       "citation": "Rojas-Gómez P, Pariyani R, Bateman LM, Lynch D, Timlin M, Dineen M, McCarthy NA, et al. Effect of proportion of pasture in the cow diet and seasonality on the milk metabolome as determined by 1H-NMR. Journal of Dairy Science 108(5): 4659–4673 (2025).",
-      "citation_url": "https://www.sciencedirect.com/science/article/pii/S0022030225001754",
+      "citation_url": "https://doi.org/10.3168/jds.2024-26168",
+      "doi": "10.3168/jds.2024-26168",
       "featured": "Hippurate",
       "design": "54 cows were assigned to three feeding systems (GRS, PMR and TMR) and their milk was sampled over 37 weeks (37 weeks × 3 diets = 111 samples). Skimmed milk was filtered through 3 kDa filters and analysed by ¹H-NMR, with spectral analysis and statistics in R and MetaboAnalyst 6.0.",
       "design_figure": {
@@ -120,6 +122,7 @@
       ],
       "citation": "Rojas-Gómez P, Pariyani R, Dineen M, Lynch D, Bateman L, Roche E, Maguire AR, McCarthy NA, Murphy TB, O’Mahony JA, O’Callaghan TF. The MetaBó-Bainne Study: characterisation of the milk metabolome from a seasonal pasture-based dairy system using 1H-NMR spectroscopy. Food Chemistry (2026).",
       "citation_url": "https://doi.org/10.1016/j.foodchem.2026.149492",
+      "doi": "10.1016/j.foodchem.2026.149492",
       "intro": "This study characterised the milk metabolome in Irish seasonal pasture-based dairy systems using ¹H-NMR spectroscopy. Seasonal, lactational and milk source-related variation was investigated across the production year using 533 milk samples collected over 41 weeks. The work sought metabolites and pathways associated with physiological adaptation, energy balance, metabolic stress and nitrogen use efficiency, and evaluated potential seasonal biomarkers.",
       "design": "Over 41 weeks, raw bulk tank milk was collected weekly from ten dairy farms (n = 10 per week) and three commercial pasteurised skimmed milks were bought weekly (n = 3 per week): 13 samples × 41 weeks = 533 samples. Samples were defatted, filtered through 3 kDa filters and analysed by ¹H-NMR; 38 metabolites were quantified.",
       "season_def": "Calendar seasons: Winter = February; Spring = March, April, May; Summer = June, July, August; Autumn = September, October, November.",

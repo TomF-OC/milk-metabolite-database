@@ -27,7 +27,7 @@
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0e1612; --surface: #15201b; --sunk: #1b2822; --ink: #e3ece6; --muted: #9db0a5; --line: #2a3a32;
     --accent: #5cc08f; --accent-ink: #0e1612; --pos: #5bb7d8; --neg: #e8896b; --ok: #5cc08f;
     --s1: #5cc08f; --s2: #ecaa4c; --s3: #86a6dc; --s4: #b893d6; --s5: #64c4c4; --s6: #e07c9f;
@@ -37,6 +37,16 @@
     color-scheme: dark;
   }
 }
+:root[data-theme="dark"] {
+    --bg: #0e1612; --surface: #15201b; --sunk: #1b2822; --ink: #e3ece6; --muted: #9db0a5; --line: #2a3a32;
+    --accent: #5cc08f; --accent-ink: #0e1612; --pos: #5bb7d8; --neg: #e8896b; --ok: #5cc08f;
+    --s1: #5cc08f; --s2: #ecaa4c; --s3: #86a6dc; --s4: #b893d6; --s5: #64c4c4; --s6: #e07c9f;
+    --t1: #a7d77d; --t2: #f0c454; --t3: #e3826a; --t4: #8fb0de;
+    --k1: #5cc08f; --k2: #ecaa4c; --k3: #86a6dc; --k4: #e07c9f; --k5: #64c4c4; --k6: #b893d6; --k7: #c9b36a; --k8: #e8896b;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
+    color-scheme: dark;
+  }
+
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 17px; line-height: 1.55; }
@@ -276,3 +286,26 @@ details summary { cursor: pointer; color: var(--muted); font-size: .9rem; margin
 [hidden]{display:none!important}
 .grid2:has(> [hidden]){grid-template-columns:1fr}
 .grid2:not(:has(> :not([hidden]))){display:none}
+
+/* properties study (milk properties by month + predictor models) */
+.sub-block { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
+.small { font-size: .82rem; }
+.chart .letters { font-size: 11px; fill: var(--muted); }
+.chart .eyebrow-t { font-size: 10.5px; letter-spacing: .08em; fill: var(--muted); font-weight: 600; }
+.chart .muted-t { fill: var(--muted); }
+.chart .small-t { font-size: 11.5px; }
+.r2 { margin: 6px 0 2px; font-size: .92rem; }
+.tbl-h { font-size: 1rem; margin: 20px 0 6px; }
+.tbl-h .muted { font-weight: 400; font-size: .88rem; }
+table.props td { white-space: nowrap; }
+sup.grp { font-family: var(--f-mono); font-size: .68em; color: var(--muted); margin-left: 1px; }
+.unit { color: var(--muted); font-weight: 400; }
+details.coefs { margin-top: 18px; }
+details.coefs summary { cursor: pointer; font-weight: 600; }
+.coef-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; margin-top: 12px; }
+.coef h4 { margin: 0 0 6px; font-size: .95rem; }
+.coef h4 .muted { font-weight: 400; font-size: .82rem; }
+.dir { font-size: .82rem; font-weight: 600; white-space: nowrap; }
+.dir.up { color: var(--pos); }
+.dir.down { color: var(--neg); }
+.mcard .viz b.pred { display: block; font-size: .78rem; font-weight: 600; color: var(--ink); margin-top: 4px; }
