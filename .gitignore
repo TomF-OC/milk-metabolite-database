@@ -1,6 +1,8 @@
 # built automatically by GitHub, never committed
 site/
 __pycache__/
+# unpublished study files: stay on this computer, never uploaded to GitHub
+drafts/
 # macOS
 .DS_Store
 # Excel lock files

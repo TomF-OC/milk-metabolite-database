@@ -45,6 +45,24 @@ To bring a chart back, delete its name from the list. Names you can use:
 
 If a name is misspelt, nothing is hidden, and the build log on the Actions tab shows a warning.
 
+## Prepare a study before it goes public
+
+Add `"visible": false,` to a study's entry in `src/site.json`. The study is then left out of the website completely: it gets no page, no home-page card, no charts, nothing on the MetaBó-Cards, no CSV downloads and no figures. You can push as often as you like while you work on it. To publish it, change the line to `"visible": true,` (or delete it) and push.
+
+**Important:** this repository is public, so anything you commit can be downloaded from github.com even while the study is hidden from the website. If the data or figures are unpublished, keep them in a `drafts/` folder in this repository. That folder is listed in `.gitignore`, so it stays on your computer and is never uploaded:
+
+1. Put the data in its own workbook, e.g. `drafts/housing-2027.xlsx`, and point the study at it:
+   ```
+   "visible": false,
+   "workbook": "drafts/housing-2027.xlsx",
+   "sheet": "Sheet1",
+   ```
+   The study's text in `site.json` will be public, so keep it vague (a working title) until you publish.
+2. Keep its figures in `drafts/figures/` for now.
+3. When the paper is out, move the workbook into `src/` and the figures into `figures/<study-id>/`. Then change `"workbook"` to e.g. `"housing-2027.xlsx"` (or move the sheet into `Book1.xlsx` and delete the `"workbook"` line), set `"visible": true` and push.
+
+To preview a hidden study on your own computer before publishing, run `python3 build.py --show-hidden` and open `site/index.html`.
+
 ## Add a new study
 
 1. **Data:** add a sheet to `src/Book1.xlsx` in the same layout as the existing ones: metabolite names down the first column, and a `mean ± SD` value in each cell.

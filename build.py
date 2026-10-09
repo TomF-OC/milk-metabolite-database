@@ -10,7 +10,7 @@ Writes  site/                      a static website ready for GitHub Pages
 Run:    python3 build.py
 Needs:  Python 3.9+, openpyxl, numpy
 """
-import csv, html, json, math, re, shutil
+import csv, html, json, math, re, shutil, sys
 from pathlib import Path
 
 import numpy as np
@@ -45,10 +45,25 @@ def plabel(v):
 
 
 # ---------------------------------------------------------------- read data
-wb = openpyxl.load_workbook(SRC / "Book1.xlsx", data_only=True)
+# A study with "visible": false in site.json is left out of the website completely
+# (no page, no charts, no data downloads, no figures). Preview it on your own computer with
+#   python3 build.py --show-hidden
+SHOW_HIDDEN = "--show-hidden" in sys.argv
+HIDDEN = [st for st in CFG["studies"] if st.get("visible", True) is False and not SHOW_HIDDEN]
+for st in HIDDEN:
+    print(f"hidden study (not published): {st['id']}")
+books = {}
+def sheet_rows(st):
+    wbname = st.get("workbook", "Book1.xlsx")  # optional: a study can keep its data in its own .xlsx
+    path = SRC / wbname if (SRC / wbname).exists() else ROOT / wbname  # e.g. "drafts/new-study.xlsx"
+    if path not in books:
+        books[path] = openpyxl.load_workbook(path, data_only=True)
+    return list(books[path][st["sheet"]].iter_rows(values_only=True))
 studies = []
 for st in CFG["studies"]:
-    rows = list(wb[st["sheet"]].iter_rows(values_only=True))
+    if st in HIDDEN:
+        continue
+    rows = sheet_rows(st)
     d = dict(st)
     if st["kind"] == "timecourse":
         head = rows[0]
@@ -197,6 +212,11 @@ for d in ["figures", "brand"]:  # read from the repo root (figures/, brand/) and
     for base in (ROOT, SRC):
         if (base / d).exists():
             shutil.copytree(base / d, OUT / d, dirs_exist_ok=True)
+in_use = {(s.get("metabolite_figures") or {}).get("dir") for s in CFG["studies"] if s not in HIDDEN}
+for st in HIDDEN:  # keep a hidden study's figures off the website too
+    for d in [f"figures/{st['id']}", (st.get("metabolite_figures") or {}).get("dir")]:
+        if d and d not in in_use and (OUT / d).exists():
+            shutil.rmtree(OUT / d)
 
 
 def fig_html(root, f, cls="fig"):
