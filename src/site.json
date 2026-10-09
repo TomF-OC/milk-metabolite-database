@@ -1,0 +1,309 @@
+{
+  "site_title": "Milk Metabolite Database",
+  "project": "MetaBó-Bainne",
+  "project_url": "https://www.metabobainne.ie/",
+  "tagline": "Examination of the Irish milk metabolome for improved prediction of milk processability and sustainability.",
+  "funding": "Funded by the Irish Department of Agriculture, Food and the Marine (project reference 2021R568).",
+  "license_name": "MetaBó-Bainne Terms & Conditions",
+  "license_url": "terms.html",
+  "dataset_doi": "",
+  "contact_email": "tom_ocallaghan@ucc.ie",
+  "studies": [
+    {
+      "id": "pasture-diet",
+      "kind": "factorial",
+      "sheet": "pasture based study",
+      "title": "Pasture proportion in the diet",
+      "short": "Diet study",
+      "summary": "How the share of grazed pasture in the cow's diet and the season of the year shape the milk metabolome.",
+      "factor_a": "Season",
+      "factor_b": "Diet",
+      "level_names": {
+        "GRS": "Perennial ryegrass pasture",
+        "PMR": "Partial mixed ration",
+        "TMR": "Total mixed ration"
+      },
+      "level_text": {
+        "GRS": "Cows graze primarily on pasture, relying on fresh grass as the main nutrient source. In this study the GRS diet was grazed perennial ryegrass (Lolium perenne L.) through rotational grazing, about 95% of the annual diet, plus parlour concentrates (5%). The system is low-cost, environmentally sustainable and supports natural cow behaviour.",
+        "PMR": "Combines grazing and a mixed ration. Cows grazed perennial ryegrass outside during daylight hours and were housed at night on the TMR diet at half the quantity. The PMR diet was 45% grazed grass (9 kg), 22% concentrates (4.5 kg), 22% maize silage (4.5 kg) and 11% grass silage (2.25 kg).",
+        "TMR": "A fully controlled feeding strategy in which all components (silage, hay, grains, protein sources, vitamins and minerals) are mixed into a single ration. The TMR concentrates had 93.9% DM, with 22% CP, 23.9% NDF and 7.2% ash. The parlour concentrates fed to each herd (the sole concentrates for the GRS herd) had 89% DM, 13.3% CP and 30.9% fibre."
+      },
+      "findings": [
+        "The proportion of pasture in the cow diet had a significant effect on the milk metabolome.",
+        "Multivariate analysis (PLS-DA) separated the diets, with sample relationships changing in line with the proportion of pasture: GRS milks segregated clearly from TMR milks, while PMR milks resembled both.",
+        "Variable importance in projection (VIP) analysis highlighted 12 metabolites driving this separation: hippurate, propionate, succinate, valine, methanol, lactate, isobutyrate, formate, alanine, creatine phosphate, glucose-1-phosphate and dimethyl sulfone.",
+        "Hippurate was the most distinctive marker of diet, rising in proportion to the amount of pasture (AUC = 1.0 for GRS vs TMR)."
+      ],
+      "citation": "Rojas-Gómez P, Pariyani R, Bateman LM, Lynch D, Timlin M, Dineen M, McCarthy NA, et al. Effect of proportion of pasture in the cow diet and seasonality on the milk metabolome as determined by 1H-NMR. Journal of Dairy Science 108(5): 4659–4673 (2025).",
+      "citation_url": "https://www.sciencedirect.com/science/article/pii/S0022030225001754",
+      "featured": "Hippurate",
+      "design": "54 cows were assigned to three feeding systems (GRS, PMR and TMR) and their milk was sampled over 37 weeks (37 weeks × 3 diets = 111 samples). Skimmed milk was filtered through 3 kDa filters and analysed by ¹H-NMR, with spectral analysis and statistics in R and MetaboAnalyst 6.0.",
+      "design_figure": {
+        "file": "figures/pasture-diet/experimental-outline.jpg",
+        "alt": "Experimental outline of the diet study",
+        "caption": "Experimental outline: three feeding systems, milk collection over 37 weeks, sample preparation (centrifugation, 3 kDa filtration, Chenomx internal standard), ¹H-NMR, spectral analysis and statistical analysis."
+      },
+      "vip_metabolites": [
+        "Hippurate",
+        "Propionate",
+        "Succinate",
+        "Valine",
+        "Methanol",
+        "Lactate",
+        "Isobutyrate",
+        "Formate",
+        "Alanine",
+        "Creatine phosphate",
+        "Glucose-1-phosphate",
+        "Dimethyl sulfone"
+      ],
+      "figures": [
+        {
+          "file": "figures/pasture-diet/plsda-diet.jpg",
+          "title": "PLS-DA by feeding system",
+          "caption": "PLS-DA scores plot of milk metabolite profiles from Grass (GRS), PMR and TMR diets. Component 1 explains 14.4% and component 2 16.3% of the variation; shaded ellipses mark each group."
+        },
+        {
+          "file": "figures/pasture-diet/vip-diet.jpg",
+          "title": "Key metabolites (VIP)",
+          "caption": "Variable importance in projection (VIP) scores for the 12 metabolites that best separated the feeding systems. The boxes on the right show relative concentration in Grass, PMR and TMR milk (red high, blue low)."
+        },
+        {
+          "file": "figures/pasture-diet/diet-season-panels.png",
+          "title": "Diet × season",
+          "caption": "(A) PLS-DA by diet and season (R² = 0.73, Q² = 0.68, P < 0.001 from 2,000 permutations). (B) VIP scores with relative concentrations for each diet × season group. (C) PLS-DA by month of lactation. (D) Hippurate distribution by diet in spring, summer and autumn."
+        }
+      ],
+      "metabolite_figures": {
+        "dir": "figures/metabolites",
+        "items": [
+          {
+            "key": "diet",
+            "title": "By diet",
+            "caption": "Box plots by feeding system with individual samples; the black dot marks the mean."
+          },
+          {
+            "key": "density",
+            "title": "Distribution",
+            "caption": "Distribution of concentrations in each feeding system."
+          },
+          {
+            "key": "line",
+            "title": "Across lactation",
+            "caption": "Monthly means with error bars for each feeding system, March to November, with individual samples."
+          },
+          {
+            "key": "season",
+            "title": "By season",
+            "caption": "Box plots by feeding system within spring, summer and autumn."
+          }
+        ]
+      },
+      "vip_label": "Key diet marker"
+    },
+    {
+      "id": "seasonality",
+      "kind": "timecourse",
+      "sheet": "seasonality study",
+      "title": "Seasonality of the pasture-based milk metabolome",
+      "short": "Seasonality study",
+      "summary": "The milk metabolome of Irish seasonal pasture-based dairy systems across the production year: 533 milk samples over 41 weeks.",
+      "time_label": "Month",
+      "findings": [
+        "30 of the 38 quantified metabolites varied significantly with season.",
+        "February (winter) milk, from early lactation, was enriched in ketone bodies, O-phosphocholine, creatinine and glucose-1-phosphate, reflecting metabolic stress and negative energy balance after calving.",
+        "Autumn milk, from late lactation, had more choline and urea, indicating better energy status but lower nitrogen use efficiency.",
+        "VIP analysis by season highlighted urea, N-acetylglucosamine, glutamate, choline, acetoacetate, creatinine, citrate, O-phosphocholine, glucose-1-phosphate, trimethylamine, fucose, hippurate and proline (VIP > 1).",
+        "Farm and shop milk profiles did not separate significantly (PLS-DA permutation test, n = 2,000, p = 0.087)."
+      ],
+      "citation": "Rojas-Gómez P, Pariyani R, Dineen M, Lynch D, Bateman L, Roche E, Maguire AR, McCarthy NA, Murphy TB, O’Mahony JA, O’Callaghan TF. The MetaBó-Bainne Study: characterisation of the milk metabolome from a seasonal pasture-based dairy system using 1H-NMR spectroscopy. Food Chemistry (2026).",
+      "citation_url": "https://doi.org/10.1016/j.foodchem.2026.149492",
+      "intro": "This study characterised the milk metabolome in Irish seasonal pasture-based dairy systems using ¹H-NMR spectroscopy. Seasonal, lactational and milk source-related variation was investigated across the production year using 533 milk samples collected over 41 weeks. The work sought metabolites and pathways associated with physiological adaptation, energy balance, metabolic stress and nitrogen use efficiency, and evaluated potential seasonal biomarkers.",
+      "design": "Over 41 weeks, raw bulk tank milk was collected weekly from ten dairy farms (n = 10 per week) and three commercial pasteurised skimmed milks were bought weekly (n = 3 per week): 13 samples × 41 weeks = 533 samples. Samples were defatted, filtered through 3 kDa filters and analysed by ¹H-NMR; 38 metabolites were quantified.",
+      "season_def": "Calendar seasons: Winter = February; Spring = March, April, May; Summer = June, July, August; Autumn = September, October, November.",
+      "season_sheet": "seasonality_by_season.csv",
+      "vip_label": "Key seasonal marker",
+      "vip_metabolites": [
+        "Urea",
+        "N-Acetylglucosamine",
+        "Glutamate",
+        "Choline",
+        "Acetoacetate",
+        "Creatinine",
+        "Citrate",
+        "O-Phosphocholine",
+        "Glucose-1-phosphate",
+        "Trimethylamine",
+        "Fucose",
+        "Hippurate",
+        "Proline"
+      ],
+      "design_figure": {
+        "file": "figures/seasonality/experimental-outline.jpg",
+        "alt": "Experimental outline of the seasonality study",
+        "caption": "Experimental outline: weekly collection of bulk tank raw milk and pasteurised shop milk, sample preparation (centrifugation, 3 kDa filtration, Chenomx internal standard), ¹H-NMR, spectral analysis and statistical analysis in R and MetaboAnalyst 6.0."
+      },
+      "figures": [
+        {
+          "file": "figures/seasonality/plsda-vip-season.png",
+          "title": "Seasons (PLS-DA and VIP)",
+          "caption": "(A) PLS-DA biplot of milk metabolome profiles by season (component 1: 29.6%, component 2: 26.7%; R² = 0.255, Q² = 0.240, p < 0.001 from 2,000 permutations), with the metabolites contributing most shown as loading vectors. (B) VIP scores; metabolites with VIP > 1 are relevant for discrimination. The heatmap shows relative concentration in each season (red high, blue low)."
+        },
+        {
+          "file": "figures/seasonality/plsda-vip-month.png",
+          "title": "Months (PLS-DA and VIP)",
+          "caption": "(A) PLS-DA biplot of milk metabolome profiles by month (component 1: 32.1%, component 2: 24.3%; R² = 0.170, Q² = 0.158, p < 0.001 from 2,000 permutations). (B) VIP scores, with relative concentration in each month (red high, blue low)."
+        },
+        {
+          "file": "figures/seasonality/plsda-farm-shop.png",
+          "title": "Farm vs shop milk",
+          "caption": "PLS-DA biplot of farm (bulk tank) and shop (pasteurised) milk profiles (component 1: 19.6%, component 2: 29.6%; R² = 0.377, Q² = 0.340). The permutation test (n = 2,000) gave p = 0.087, so the separation is not statistically significant."
+        }
+      ],
+      "metabolite_figures": {
+        "dir": "figures/seasonality-metabolites",
+        "items": [
+          {
+            "key": "season",
+            "ext": "png",
+            "title": "By season",
+            "caption": "Mean concentration across seasons ± standard error (black line); each point is an individual milk sample, coloured by farm or shop milk."
+          },
+          {
+            "key": "month",
+            "ext": "png",
+            "title": "By month",
+            "caption": "Mean concentration across months ± standard error (black line); each point is an individual milk sample."
+          },
+          {
+            "key": "farmshop",
+            "ext": "png",
+            "title": "Farm vs shop milk",
+            "caption": "Monthly box plots for farm and shop milk with individual samples as grey dots; red and blue lines follow the monthly means."
+          },
+          {
+            "key": "sources",
+            "ext": "png",
+            "title": "By milk source",
+            "caption": "Every sample from each farm and shop milk source; bubble size is proportional to concentration and colour shows the month (February to November)."
+          }
+        ]
+      }
+    }
+  ],
+  "attribution": "MetaBó-Bainne - The Pasture-Based Milk Metabolome Database (2021R568), funded by the Irish Department of Agriculture, Food and the Marine.",
+  "terms": [
+    {
+      "title": "Acceptance of Terms",
+      "blocks": [
+        "By accessing MetaBó-Bainne (\"the Site\"), you agree to these Terms and Conditions. If you do not agree, please do not use the Site."
+      ]
+    },
+    {
+      "title": "About MetaBó-Bainne",
+      "blocks": [
+        "This Site provides access to the Pasture-Based Milk Metabolome Database, an open-access resource containing information on metabolites found in Irish milk. The MetaBó-Bainne project is funded by the Irish Government Department of Agriculture, Food and the Marine (project reference 2021R568)."
+      ]
+    },
+    {
+      "title": "Use of Information",
+      "blocks": [
+        "The information on this Site is provided for research, educational, and informational purposes only. While we strive for accuracy, the Site and database are provided \"as is\" without warranties of any kind, either express or implied.",
+        "Users acknowledge that:",
+        {
+          "list": [
+            "Data is based on research and may not be applicable to all situations.",
+            "Metabolite concentrations can vary based on numerous factors.",
+            "Information should not be used as the sole basis for commercial, production, or processing decisions without independent verification.",
+            "The Site is not a substitute for professional consultation with qualified specialists.",
+            "The Site is not intended for medical, nutritional, or commercial product formulation decisions without independent verification."
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Limitation of Liability",
+      "blocks": [
+        "To the fullest extent permitted by Irish law, MetaBó-Bainne, its operators, the Department of Agriculture, Food and the Marine, and associated institutions shall not be liable for any damages arising from:",
+        {
+          "list": [
+            "Use or inability to use the Site or database.",
+            "Reliance on information provided.",
+            "Errors, omissions, or inaccuracies in the data.",
+            "Business losses, production issues, or processing problems."
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Intellectual Property",
+      "blocks": [
+        "All content, including the database structure, research data, text, graphics, and design, is owned by MetaBó-Bainne and its partners or licensors.",
+        "Open Access: The database is provided as an open-access resource. Users may access and reference the data for research, educational, and non-commercial purposes with appropriate attribution.",
+        "Attribution: When citing or referencing data from this Site, please acknowledge: \"MetaBó-Bainne - The Pasture-Based Milk Metabolome Database (2021R568), funded by the Irish Department of Agriculture, Food and the Marine.\" and the relevant publication for the given data source.",
+        "Prohibited uses include:",
+        {
+          "list": [
+            "Reproducing substantial portions of the database for commercial sale.",
+            "Misrepresenting data or sources.",
+            "Scraping or automated data extraction without permission."
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Acceptable Use",
+      "blocks": [
+        "You agree not to:",
+        {
+          "list": [
+            "Attempt to gain unauthorized access to any part of the Site.",
+            "Use the Site in any way that damages or disrupts its operation.",
+            "Introduce malicious code or conduct harmful activities.",
+            "Misuse or misrepresent the data."
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Third-Party Links",
+      "blocks": [
+        "The Site may contain links to external websites. We are not responsible for the content or privacy practices of third-party sites."
+      ]
+    },
+    {
+      "title": "Data Accuracy and Updates",
+      "blocks": [
+        "The metabolome database is based on research conducted as part of the MetaBó-Bainne project. Data may be updated periodically as new research becomes available. We do not guarantee that information is always current or complete."
+      ]
+    },
+    {
+      "title": "Warranty",
+      "blocks": [
+        "The Site and all information are provided \"as is\" and \"as available\" without warranty of any kind, express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, or non-infringement."
+      ]
+    },
+    {
+      "title": "Changes to Terms",
+      "blocks": [
+        "We reserve the right to modify these Terms and Conditions at any time. Changes will be posted on this page with an updated effective date. Continued use of the Site constitutes acceptance of modified terms."
+      ]
+    },
+    {
+      "title": "Governing Law",
+      "blocks": [
+        "These Terms and Conditions are governed by the laws of Ireland. Any disputes shall be subject to the exclusive jurisdiction of the Irish courts."
+      ]
+    },
+    {
+      "title": "Contact Information",
+      "blocks": [
+        "For questions about these Terms and Conditions, please contact: {email}"
+      ]
+    }
+  ],
+  "terms_effective": "",
+  "logo": "brand/logo.png",
+  "partners_image": "brand/partners.png",
+  "partners_alt": "University College Cork; Department of Agriculture, Food and the Marine; Teagasc"
+}

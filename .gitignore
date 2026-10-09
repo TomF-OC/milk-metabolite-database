@@ -1,0 +1,7 @@
+# built automatically by GitHub, never committed
+site/
+__pycache__/
+# macOS
+.DS_Store
+# Excel lock files
+~$*

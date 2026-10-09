@@ -1,0 +1,29 @@
+metabolite,field,diet study table,seasonality table,note
+Acetate,PubChem CID,176,175,
+Butyrate,PubChem CID,264,104775,
+Carnitine,MCDB ID,BMDB00062,BMDB0000062,
+Carnitine,PubChem CID,2724480,288,
+Citrate,MetaBó-Bainne ID,MBB14,MBB13,
+Citrate,PubChem CID,311,31348,
+Creatine,MetaBó-Bainne ID,MBB16,MBB14,
+Formate,PubChem CID,284,283,
+Fumarate,PubChem CID,444972,5460307,
+Glucose-1-phosphate,PubChem CID,123912,65533,
+Lactate,PubChem CID,107689,91435,
+Lactose,PubChem CID,84571,440995,
+O-Acetylcarnitine,MCDB ID,BMDB0062647,BMDB0000201,
+O-Acetylcarnitine,PubChem CID,1,7045767,
+Pyruvate,PubChem CID,1060,107735,
+Succinate,PubChem CID,1110,160419,
+Valerate,MCDB ID,BMDB0000892,BMDB0000294,
+Valerate,PubChem CID,7991,114781,
+sn-Glycero-3-phosphocholine,PubChem CID,71920,11234,
+cis-Aconitate / Citrate (seasonality table),MetaBó-Bainne ID,MBB13,MBB13,same ID used for different metabolites
+Citrate / Creatine (seasonality table),MetaBó-Bainne ID,MBB14,MBB14,same ID used for different metabolites
+Acetoacetate / Succinate,MetaBó-Bainne ID,MBB39,MBB39,same ID used for different metabolites
+Glutamate / Tyrosine,MetaBó-Bainne ID,MBB40,MBB40,same ID used for different metabolites
+Isoleucine / Urea,MetaBó-Bainne ID,MBB41,MBB41,same ID used for different metabolites
+Malonate / Uridine,MetaBó-Bainne ID,MBB42,MBB42,same ID used for different metabolites
+N-Acetylglucosamine / Valerate,MetaBó-Bainne ID,MBB43,MBB43,same ID used for different metabolites
+O-Phosphocholine / Valine,MetaBó-Bainne ID,MBB44,MBB44,same ID used for different metabolites
+Valerate,MCDB ID,BMDB0000892,BMDB0000294,seasonality table uses the urea ID
