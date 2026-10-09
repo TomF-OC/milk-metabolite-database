@@ -240,7 +240,7 @@ for s in studies:
 tc = next((s for s in studies if s["kind"] == "timecourse"), None)
 fa = next((s for s in studies if s["kind"] == "factorial"), None)
 cross = None
-if tc and fa:
+if tc and fa and "across" not in CFG.get("hide_home", []):  # "hide_home": ["across"] in site.json removes this home-page chart
     pts = []
     for m in set(tc["metabolites"]) & set(fa["metabolites"]):
         rs = [r for r in tc["rows"] if r["m"] == m]
