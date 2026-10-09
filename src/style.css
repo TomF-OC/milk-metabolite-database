@@ -271,3 +271,8 @@ details summary { cursor: pointer; color: var(--muted); font-size: .9rem; margin
 .fig-grid.wide { grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr)); }
 .mc-title { row-gap: 6px; }
 .fig-grid.wide .fig img { max-height: 560px; object-fit: contain; }
+
+/* charts switched off with "hide" in site.json */
+[hidden]{display:none!important}
+.grid2:has(> [hidden]){grid-template-columns:1fr}
+.grid2:not(:has(> :not([hidden]))){display:none}

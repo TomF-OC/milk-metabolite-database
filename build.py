@@ -389,8 +389,8 @@ for s in studies:
   <div class="panel"><div class="panel-head"><h2>Study design</h2></div><p>{E(s.get('design', ''))}</p>{fig_html(root, s['design_figure']) if s.get('design_figure') else ''}</div>
   <div class="panel"><div class="panel-head"><h2>Key findings</h2></div><ul class="findings">{''.join(f'<li>{E(f)}</li>' for f in s['findings'])}</ul></div>
 </section>
-{('<section class="wrap block" id="figures"><div class="block-head"><h2>Published figures</h2><p class="muted">From the multivariate analysis of individual milk samples. Click a figure to enlarge it.</p></div><div class="fig-grid">' + ''.join(fig_html(root, f) for f in s['figures']) + '</div></section>') if s.get('figures') else ''}
-<section class="wrap block" id="explore-bars">
+{('<section class="wrap block" id="figures" data-chart="figures"><div class="block-head"><h2>Published figures</h2><p class="muted">From the multivariate analysis of individual milk samples. Click a figure to enlarge it.</p></div><div class="fig-grid">' + ''.join(fig_html(root, f) for f in s['figures']) + '</div></section>') if s.get('figures') else ''}
+<section class="wrap block" id="explore-bars" data-chart="bars">
   <div class="panel">
     <div class="panel-head"><h2>One metabolite, every diet and season</h2>
     <p class="muted">Mean ± SD in mM. Press tour to step through every metabolite with a significant diet × season interaction.</p></div>
@@ -401,19 +401,19 @@ for s in studies:
   </div>
 </section>
 <section class="wrap block grid2">
-  <div class="panel">
+  <div class="panel" data-chart="pca">
     <div class="panel-head"><h2>Diet and season groups (PCA)</h2><p class="muted">PCA of the nine group means (log2, autoscaled). Each diet's path runs {E(' → '.join(s['a_levels']))}; dots grow through the year. PC1 explains <b class="num">{s['pca']['var'][0]:.1%}</b>, PC2 <b class="num">{s['pca']['var'][1]:.1%}</b>.</p></div>
     <div class="controls"><button class="btn" id="pca-load" aria-pressed="false">Show top loadings</button><button class="btn" id="pca-replay">↻ Replay</button></div>
     <ul class="legend" id="pca-legend"></ul>
     <div class="chart" id="pca-chart" style="--h:380px"></div>
   </div>
-  <div class="panel">
+  <div class="panel" data-chart="drivers">
     <div class="panel-head"><h2>What drives each component</h2><p class="muted">The 12 metabolites with the largest loadings. Metabolites on the same side rise and fall together.</p></div>
     <div class="controls"><label for="drv-pc">Component</label><select id="drv-pc"><option value="pc1">PC1</option><option value="pc2">PC2</option></select></div>
     <div class="chart" id="drv-chart" style="--h:330px"></div>
   </div>
 </section>
-<section class="wrap block">
+<section class="wrap block" data-chart="shift">
   <div class="panel">
     <div class="panel-head"><h2>Dietary shift across seasons</h2><p class="muted">How far one diet moves each metabolite relative to another, one dot per season. A long line means the diet effect depends on the season. Sort by a season to watch the ranking reshuffle.</p></div>
     <div class="controls"><label for="sh-c">Compare</label><select id="sh-c"></select><span class="muted">Sort by</span><div class="chips" id="sh-focus"></div></div>
@@ -421,7 +421,7 @@ for s in studies:
     <div class="chart" id="sh-chart" style="--h:780px"></div>
   </div>
 </section>
-<section class="wrap block">
+<section class="wrap block" data-chart="pvalues">
   <div class="panel">
     <div class="panel-head"><h2>Significance table</h2><p class="muted">P-values as reported. Bold values are below 0.05. Sort by any column; metabolite names open their MetaBó-Card.</p></div>
     <div class="controls"><input type="search" id="pv-q" placeholder="Search metabolites" aria-label="Search metabolites"><a class="btn" href="../data/{s['id']}_pvalues.csv" download>Download CSV</a></div>
@@ -432,7 +432,7 @@ for s in studies:
         seas_tbl = ""
         if s.get("season_rows"):
             seas_tbl = f"""
-<section class="wrap block">
+<section class="wrap block" data-chart="by_season">
   <div class="panel">
     <div class="panel-head"><h2>By season</h2><p class="muted">{E(s.get('season_def', ''))} Mean ± SD in mM. Shading runs from each metabolite's lowest season (light) to its highest (dark).</p></div>
     <div class="controls"><input type="search" id="ss-q" placeholder="Search metabolites" aria-label="Search metabolites"><a class="btn" href="../data/{s['id']}_by_season.csv" download>Download CSV</a></div>
@@ -444,8 +444,8 @@ for s in studies:
   <div class="panel"><div class="panel-head"><h2>Study design</h2></div><p>{E(s.get('design', ''))}</p><p class="muted">{E(s.get('season_def', ''))}</p>{fig_html(root, s['design_figure']) if s.get('design_figure') else ''}</div>
   <div class="panel"><div class="panel-head"><h2>Key findings</h2></div><ul class="findings">{''.join(f'<li>{E(f)}</li>' for f in s['findings'])}</ul></div>
 </section>
-{('<section class="wrap block" id="figures"><div class="block-head"><h2>Published figures</h2><p class="muted">From the multivariate analysis of all 533 milk samples. Click a figure to enlarge it.</p></div><div class="fig-grid wide">' + ''.join(fig_html(root, f) for f in s['figures']) + '</div></section>') if s.get('figures') else ''}
-<section class="wrap block">
+{('<section class="wrap block" id="figures" data-chart="figures"><div class="block-head"><h2>Published figures</h2><p class="muted">From the multivariate analysis of all 533 milk samples. Click a figure to enlarge it.</p></div><div class="fig-grid wide">' + ''.join(fig_html(root, f) for f in s['figures']) + '</div></section>') if s.get('figures') else ''}
+<section class="wrap block" data-chart="year">
   <div class="panel">
     <div class="panel-head"><h2>Through the year</h2><p class="muted">Monthly mean ± SD in mM. Press play to move through the months; every chart on this page follows the same month.</p></div>
     <div class="controls">
@@ -467,24 +467,28 @@ for s in studies:
   </div>
 </section>
 <section class="wrap block grid2">
-  <div class="panel">
+  <div class="panel" data-chart="clock">
     <div class="panel-head"><h2>Seasonal clock</h2><p class="muted">The most seasonal metabolites around the calendar against their own average. Pick up to four.</p></div>
     <div class="chips" id="clock-chips"></div>
     <div class="chart" id="clock-chart" style="--h:440px"></div>
   </div>
-  <div class="panel">
+  <div class="panel" data-chart="pca">
     <div class="panel-head"><h2>Seasonal trajectory (PCA)</h2><p class="muted">PCA of the monthly means (log2, autoscaled); the path follows the calendar and the ring marks the selected month. PC1 explains <b class="num">{s['pca']['var'][0]:.1%}</b>, PC2 <b class="num">{s['pca']['var'][1]:.1%}</b>. The published PLS-DA used the individual samples.</p></div>
     <div class="controls"><button class="btn" id="pca-load" aria-pressed="false">Show top loadings</button><button class="btn" id="pca-replay">↻ Replay</button></div>
     <div class="chart" id="pca-chart" style="--h:380px"></div>
   </div>
 </section>
-<section class="wrap block">
+<section class="wrap block" data-chart="fingerprint">
   <div class="panel">
     <div class="panel-head"><h2>Seasonal fingerprint</h2><p class="muted">Each metabolite against its own February–November average, ordered by the month it peaks. Click a row to chart it above.</p></div>
     <div class="grad"><span>½× average</span><span class="bar"></span><span>2× average</span></div>
     <div class="chart" id="heat-chart" style="--h:640px"></div>
   </div>
 </section>{seas_tbl}"""
+    for name in s.get("hide", []):  # charts switched off in site.json, e.g. "hide": ["pca", "shift"]
+        if f'data-chart="{name}"' not in body:
+            print(f"warning: {s['id']} hide: no chart called '{name}'")
+        body = body.replace(f'data-chart="{name}"', f'data-chart="{name}" hidden')
     page(f"studies/{s['id']}.html", f"{s['title']} · {CFG['site_title']}", body, root, "study", f'data-study="{s["id"]}"', s["summary"])
 
 # metabolite index

@@ -24,6 +24,27 @@ Tips:
 - `site.json` is strict JSON. Keep the quotes and commas exactly as they are, and write a quote mark inside text as `\"`. If a build fails after editing it, paste the file into jsonlint.com to find the problem.
 - Close Excel before committing, so its temporary `~$` lock file isn't picked up.
 
+## Switch a chart off
+
+Each study entry in `src/site.json` can have a `hide` list. For example, to remove the PCA and the dietary-shift chart from the diet study, add this line inside that study's entry, next to `"kind"`:
+
+```
+"hide": ["pca", "drivers", "shift"],
+```
+
+To bring a chart back, delete its name from the list. Names you can use:
+
+| Diet study (`factorial`) | Seasonality study (`timecourse`) |
+|---|---|
+| `bars`: one metabolite, every diet and season | `year`: through the year (line chart, play button, fold-change bars) |
+| `pca`: diet and season groups (PCA) | `clock`: seasonal clock |
+| `drivers`: what drives each component | `pca`: seasonal trajectory (PCA) |
+| `shift`: dietary shift across seasons | `fingerprint`: seasonal fingerprint heatmap |
+| `pvalues`: significance table | `by_season`: by-season table |
+| `figures`: published figures | `figures`: published figures |
+
+If a name is misspelt, nothing is hidden, and the build log on the Actions tab shows a warning.
+
 ## Add a new study
 
 1. **Data:** add a sheet to `src/Book1.xlsx` in the same layout as the existing ones: metabolite names down the first column, and a `mean ± SD` value in each cell.
