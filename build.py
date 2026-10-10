@@ -528,14 +528,29 @@ def study_meta(s):
 
 # home
 n_samples = "533"
-study_cards = "".join(f"""
-  <a class="study-card" href="studies/{s['id']}.html" id="card-{s['id']}">
+def study_card(s):
+    return f"""
+  <a class="study-card{' alt' if s.get('group') and s.get('group') != (CFG.get('study_groups') or [{}])[0].get('id') else ''}" href="studies/{s['id']}.html" id="card-{s['id']}">
     <span class="eyebrow">{E(s['short'])}{(' · ' + E(s['platform'])) if s.get('platform') else ''}</span>
     <h3>{E(s['title'])}</h3>
     <p>{E(s['summary'])}</p>
     {card_visual(s)}
     <span class="study-meta">{study_meta(s)}</span>
-  </a>""" for s in studies)
+  </a>"""
+
+
+# "study_groups" in site.json splits the home page into labelled rows; a study joins one with "group": "<id>"
+GROUPS = CFG.get("study_groups") or []
+if GROUPS:
+    gid0 = GROUPS[0]["id"]
+    study_cards = ""
+    for g in GROUPS:
+        members = [s for s in studies if s.get("group", gid0) == g["id"]]
+        if not members:
+            continue
+        study_cards += f'''<div class="study-group" id="group-{E(g['id'])}"><div class="group-head"><h3>{E(g.get('title', ''))}</h3><p class="muted">{E(g.get('text', ''))}</p></div><div class="study-grid">{"".join(study_card(s) for s in members)}</div></div>'''
+else:
+    study_cards = f'<div class="study-grid">{"".join(study_card(s) for s in studies)}</div>'
 home = f"""
 <section class="hero">
   <div class="wrap hero-in">
@@ -562,25 +577,33 @@ home = f"""
 </section>
 <section class="wrap block" id="studies">
   <div class="block-head"><h2>Studies</h2><p class="muted">Each study has its own interactive page, and every metabolite has a MetaBó-Card that joins the studies together.</p></div>
-  <div class="study-grid">{study_cards}</div>
+  {study_cards}
 </section>
 """
-if cross:
-    home += f"""
-<section class="wrap block" id="across">
-  <div class="block-head"><h2>Do the two studies agree on season?</h2>
-  <p class="muted">Each dot is a metabolite measured in both studies, plotted by how much it changed from early to late in the year. Dots near the dashed diagonal moved the same way, by a similar amount, in both. Correlation <b class="num">r = {cross['r']}</b> across {len(cross['pts'])} metabolites.</p></div>
-  <div class="panel"><div class="chart" id="cross-chart" style="--h:420px"></div><ul class="legend" id="cross-legend"></ul></div>
-</section>"""
-if CFG.get("home_note"):  # a short text section on the home page, written from the papers' own findings
+# home: seasonal trends across both studies (the papers' findings, then the site's comparison chart)
+note_html = ""
+if CFG.get("home_note"):  # a short text from the papers' own findings
     hn = CFG["home_note"]
     txt = E(hn.get("text", ""))
     for m in sorted(all_mets, key=len, reverse=True):  # link metabolite names to their MetaBó-Cards
         txt = re.sub(rf"(?<![\w>-]){re.escape(E(m.lower()))}(?![\w<-])", lambda mm, m=m: f'<a href="metabolites/{slug(m)}.html">{mm.group(0)}</a>', txt, count=1)
+    note_html = f'<p class="lede-sm">{txt}</p>'
+if note_html or cross:
+    title = (CFG.get("home_note") or {}).get("title") or "Seasonal trends across both studies"
+    chart_html = ""
+    if cross:
+        chart_html = f"""
+  <h3 class="sub-title">How closely do the two studies agree?</h3>
+  <p class="muted">Each dot is a metabolite measured in both studies, plotted by how much it changed from early to late in the year. Dots near the dashed diagonal moved the same way, by a similar amount, in both. Correlation <b class="num">r = {cross['r']}</b> across {len(cross['pts'])} metabolites.</p>
+  <p class="muted small note-box wide">This comparison is calculated by this site from the published group means; it is not a result reported in either paper. Across: the seasonality study's average for the last three months (September to November) divided by the first three (February to April). Up: the diet study's autumn average divided by its spring average, across the three diets. The studies define season differently (monthly farm and shop milk versus a feeding trial with three seasonal time points) and both come from Irish pasture-based systems, so read this as a broad check of consistency rather than independent confirmation.</p>
+  <div class="chart" id="cross-chart" style="--h:420px"></div><ul class="legend" id="cross-legend"></ul>"""
     home += f"""
-<section class="wrap block" id="home-note">
-  <div class="block-head"><h2>{E(hn.get('title', ''))}</h2></div>
-  <div class="panel note-panel"><p>{txt}</p></div>
+<section class="wrap block" id="across">
+  <div class="block-head"><h2>{E(title)}</h2></div>
+  <div class="panel season-panel">
+  {note_html}
+  {chart_html}
+  </div>
 </section>"""
 home += f"""
 <section class="wrap block" id="explore">

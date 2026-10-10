@@ -321,3 +321,16 @@ button.linkish { background: none; border: 0; padding: 0; font: inherit; color: 
 .study-img { display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 8px; background: var(--surface); }
 .study-img img { max-height: 120px; width: 100%; object-fit: contain; }
 .note-panel p { max-width: 72ch; }
+
+/* home-page study groups */
+.study-group + .study-group { margin-top: 28px; }
+.group-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.group-head h3 { font-size: 1.1rem; }
+.group-head p { font-size: .9rem; }
+.study-card.alt { border-top: 3px solid var(--s2); }
+.study-card.alt .eyebrow { color: color-mix(in srgb, var(--s2) 75%, var(--ink)); }
+@media (min-width: 760px) { .study-group .study-grid > .study-card:only-child { max-width: calc(50% - 8px); } }
+.season-panel .lede-sm { font-size: 1.02rem; line-height: 1.65; }
+.season-panel .sub-title { margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 1.15rem; }
+.season-panel .muted { max-width: none; }
+.note-box.wide { max-width: none; margin-bottom: 14px; }
