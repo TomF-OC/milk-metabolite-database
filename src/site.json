@@ -8,6 +8,7 @@
   "license_url": "terms.html",
   "dataset_doi": "",
   "show_downloads": false,
+  "home_note": {"title": "Season in both studies", "text": "Both studies followed the milk metabolome through the production season. In the seasonality study, early-lactation (February) milk was enriched in ketone bodies, creatinine and glucose-1-phosphate, while autumn milk had more choline and urea. The diet study points the same way for several of these: in all three feeding systems, choline and urea were highest in autumn, and glucose-1-phosphate and acetone were highest in spring (season effect p < 0.001 for each)."},
   "eyebrow": "Open milk and colostrum metabolomics",
   "hide_home": ["across"],
   "contact_email": "tom_ocallaghan@ucc.ie",

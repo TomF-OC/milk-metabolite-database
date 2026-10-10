@@ -572,6 +572,16 @@ if cross:
   <p class="muted">Each dot is a metabolite measured in both studies, plotted by how much it changed from early to late in the year. Dots near the dashed diagonal moved the same way, by a similar amount, in both. Correlation <b class="num">r = {cross['r']}</b> across {len(cross['pts'])} metabolites.</p></div>
   <div class="panel"><div class="chart" id="cross-chart" style="--h:420px"></div><ul class="legend" id="cross-legend"></ul></div>
 </section>"""
+if CFG.get("home_note"):  # a short text section on the home page, written from the papers' own findings
+    hn = CFG["home_note"]
+    txt = E(hn.get("text", ""))
+    for m in sorted(all_mets, key=len, reverse=True):  # link metabolite names to their MetaBó-Cards
+        txt = re.sub(rf"(?<![\w>-]){re.escape(E(m.lower()))}(?![\w<-])", lambda mm, m=m: f'<a href="metabolites/{slug(m)}.html">{mm.group(0)}</a>', txt, count=1)
+    home += f"""
+<section class="wrap block" id="home-note">
+  <div class="block-head"><h2>{E(hn.get('title', ''))}</h2></div>
+  <div class="panel note-panel"><p>{txt}</p></div>
+</section>"""
 home += f"""
 <section class="wrap block" id="explore">
   <div class="block-head"><h2>Explore the metabolites</h2><p class="muted">Every metabolite has a MetaBó-Card with its biochemical role and its values in each study.</p></div>
