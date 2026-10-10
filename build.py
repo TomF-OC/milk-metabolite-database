@@ -19,6 +19,9 @@ import openpyxl
 ROOT = Path(__file__).parent
 SRC, OUT = ROOT / "src", ROOT / "site"
 CFG = json.loads((SRC / "site.json").read_text(encoding="utf-8"))
+import hashlib
+# version stamp so browsers fetch the new stylesheet and script after each change
+VER = hashlib.md5(b"".join((SRC / f).read_bytes() for f in ("style.css", "app.js"))).hexdigest()[:8]
 E = html.escape
 
 
@@ -465,7 +468,7 @@ def page(path, title, body, root, kind, extra="", desc=""):
 <meta name="description" content="{E(desc or CFG['tagline'])}">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;1,400&family=Source+Sans+3:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="{root}assets/style.css">
+<link rel="stylesheet" href="{root}assets/style.css?v={VER}">
 </head>
 <body data-page="{kind}" data-root="{root}" {extra}>
 <a class="skip" href="#main">Skip to content</a>
@@ -487,8 +490,8 @@ def page(path, title, body, root, kind, extra="", desc=""):
 <div class="tip" id="tip" role="status"></div>
 <dialog class="lightbox" id="lightbox" aria-label="Figure"><form method="dialog"><button class="lb-close" aria-label="Close">×</button></form><img alt=""><p class="lb-cap"></p></dialog>
 <script src="{root}assets/d3.min.js"></script>
-<script src="{root}assets/data.js"></script>
-<script src="{root}assets/app.js"></script>
+<script src="{root}assets/data.js?v={VER}"></script>
+<script src="{root}assets/app.js?v={VER}"></script>
 </body>
 </html>
 """

@@ -1,0 +1,24 @@
+metabolite,dataset_name,superclass,chemical_class,fold_change,p_adjusted,intragroup_p
+PC(15:0/15:0),PC(15:0/15:0),Lipids and lipid-like molecules,Glycerophospholipid,0.492,0.001,0.001
+PE(14:1(9Z)/P-16:0),PE(14:1(9Z)/P-16:0),Lipids and lipid-like molecules,Glycerophospholipid,3.434,0.011,
+PGP(16:1(9Z)/16:0),PGP(16:1(9Z)/16:0),Lipids and lipid-like molecules,Glycerophospholipid,3.169,0.001,
+LPA (18:0e/0:0),LPA(18:0e/0:0),Lipids and lipid-like molecules,Glycerophospholipid / monoalkylglycerophosphate,3.099,0.028,
+LysoPA (0:0/18:0),LysoPA(0:0/18:0),Lipids and lipid-like molecules,Glycerophospholipid / monoacylglycerophosphate,3.310,0.002,
+LysoPC (18:1(11Z)),LysoPC(18:1(11Z)),Lipids and lipid-like molecules,"Glycerophospholipid, 1-acyl-sn-glycero-3-phosphocholine",2.316,0.006,
+"LysoPC (20:4(8Z,11Z,14Z,17Z))","LysoPC(20:4(8Z,11Z,14Z,17Z))",Lipids and lipid-like molecules,"Glycerophospholipid, 1-acyl-sn-glycero-3-phosphocholine",2.161,0.011,
+LysoPE (0:0/18:1(9Z)),LysoPE(0:0/18:1(9Z)),Lipids and lipid-like molecules,"Glycerophospholipid, 2-acyl-sn-glycero-3-phosphoethanolamine",2.350,0.000,
+"LysoPE(20:5(5Z,8Z,11Z,14Z,17Z)/0:0)","LysoPE(20:5(5Z,8Z,11Z,14Z,17Z)/0:0)",Lipids and lipid-like molecules,"Glycerophospholipid, 1-acyl-sn-glycero-3-phosphoethanolamine",2.134,0.000,
+"MG(0:0/20:3(8Z,11Z,14Z)/0:0)","MG(0:0/20:3(8Z,11Z,14Z)/0:0)",Lipids and lipid-like molecules,Glycerolipid / endocannabinoid,2.737,0.000,0.000
+MG(0:0/i-16:0/0:0),MG(0:0/i-16:0/0:0),Lipids and lipid-like molecules,Glycerolipid / 2-monoacylglycerol,2.116,0.000,0.000
+Palmitaldehyde,Palmitaldehyde,Lipids and lipid-like molecules,Fatty acyl,2.682,0.000,0.000
+Prostaglandin H2,Prostaglandin H2,Lipids and lipid-like molecules,Fatty acyl / eicosanoid,2.772,0.000,0.000
+"4,8 dimethylnonanoyl carnitine","4,8 dimethylnonanoyl carnitine",Lipids and lipid-like molecules,Fatty acid ester / acyl carnitine,2.195,0.000,0.000
+"3α,7α,12α-Trihydroxy-5β-cholestanoic acid","3a,7a,12a-Trihydroxy-5b-cholestanoic acid",Lipids and lipid-like molecules,Steroid derivative / hydroxy bile acid,4.939,0.002,
+D-Erythro-imidazole-glycerol-phosphate,D-Erythro-imidazole-glycerol-phosphate,Organic acids and derivatives,Organic phosphoric acid derivative / phosphate ester,3.442,0.000,
+Glycyl aspartate,Glycyl-Aspartate,Organic acids and derivatives,Carboxylic acid derivative / dipeptide,2.285,0.000,
+Leu-Arg-Leu-Ile,Leu-Arg-Leu-Ile,Organic acids and derivatives,Carboxylic acid derivative / oligopeptide,3.653,0.002,
+N-Acetyl-L-glutamyl 5-phosphate,N-Acetyl-L-glutamyl 5-phosphate,Organic acids and derivatives,Carboxylic acid derivative / α-amino acid derivative,3.398,0.000,0.000
+Tyramine-O-sulfate,Tyramine-O-sulfate,Organic acids and derivatives,Organic sulfuric acid derivative / phenylsulfate,2.462,0.008,0.008
+(R)-Mevalonic acid-5-pyrophosphate,(R)-Mevalonic acid-5-pyrophosphate,Organic oxygen compounds,Organic pyrophosphate,2.121,0.007,0.008
+FMNH,FMNH,"Nucleosides, nucleotides, and analogues",Flavin nucleotide,2.419,0.009,0.010
+Uridine 5′-diphosphate,Uridine 5'-diphosphate,"Nucleosides, nucleotides, and analogues",Pyrimidine ribonucleoside diphosphate,2.028,0.000,

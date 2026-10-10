@@ -1,0 +1,148 @@
+{
+  "id": "colostrum",
+  "kind": "comparison",
+  "visible": true,
+  "title": "Metabolic profiling of bovine colostrum: unravelling the influences of diet and seasonality on functional dairy components",
+  "short": "Colostrum study",
+  "platform": "UHPLC-HRMS",
+  "summary": "How calving season and pre-partum diet shape the metabolome of day-0 colostrum from autumn- and spring-calving cows.",
+  "intro": "Bovine colostrum-based functional foods are gaining recognition for their potential beneficial roles in human health. However, while macronutrient variability has been extensively studied, the impact of seasonality and diet on bioactive metabolome profile of colostrum remains poorly understood. This study employs UHPLC-HRMS to characterize the metabolic profile of colostrum from dairy cows, calving in autumn or spring under distinct environmental and dietary conditions.",
+  "citation": "Pariyani R, Rocchetti G, Lawless A, Dineen M, Maher N, Bateman LM, Lucini L, O’Callaghan TF. Metabolic profiling of bovine colostrum: unravelling the influences of diet and seasonality on functional dairy components. Food Chemistry 493 (2025) 145900.",
+  "citation_url": "https://doi.org/10.1016/j.foodchem.2025.145900",
+  "doi": "10.1016/j.foodchem.2025.145900",
+  "licence_note": "Figures and tables are reproduced from the open-access article under the CC BY 4.0 licence.",
+  "design": "Day-0 colostrum from 90 Holstein-Friesian cows at the Teagasc Johnstown Castle research farm, September 2022 to March 2023: 46 autumn-calving cows, fed mainly on pasture before calving (grazing in September; grazing plus grass silage and straw in October), and 44 spring-calving cows fed grass silage. Each cow was milked into a separate churn on the day of calving. Metabolites were extracted with acetonitrile and formic acid and profiled by untargeted UHPLC-Orbitrap mass spectrometry, annotating 943 metabolites at level 2 confidence. Weather data, parity and the Economic Breeding Index (EBI) of each cow were recorded.",
+  "findings": [
+    "Autumn colostrum had at least twice the level of 22 metabolites, including phospholipids, bioactive peptides, organic acids and nucleotides.",
+    "PC(15:0/15:0) was the exception, at twice the level in spring colostrum.",
+    "Glycyl aspartate (AUC 0.866) and D-erythro-imidazole-glycerol-phosphate (AUC 0.832) emerged as biomarkers distinguishing autumn from spring colostrum.",
+    "Pre-partum diet and environmental temperature were associated with the metabolic differences; diet had the more pronounced influence.",
+    "Parity and genetic merit (EBI) had minimal influence on the differential metabolites.",
+    "Season explained less than 20% of the total variation in the colostrum metabolome."
+  ],
+  "groups": {
+    "AUT_SEP": [
+      "Autumn · September",
+      "Grazing"
+    ],
+    "AUT_OCT": [
+      "Autumn · October",
+      "Grazing and grass silage"
+    ],
+    "SPRING": [
+      "Spring",
+      "Grass silage"
+    ]
+  },
+  "supplementary": "supplementary.xlsx",
+  "table1": "table1.csv",
+  "roc": "roc.csv",
+  "card_names": {
+    "L-Alanine": "Alanine",
+    "Betaine": "Betaine",
+    "Creatine": "Creatine",
+    "Creatinine": "Creatinine",
+    "L-Isoleucine": "Isoleucine",
+    "L-Leucine": "Leucine",
+    "L-Malic acid": "Malate",
+    "L-Phenylalanine": "Phenylalanine",
+    "L-Proline": "Proline",
+    "Uridine": "Uridine"
+  },
+  "card_notes": {
+    "Alanine": "The paper reports alanine as more abundant in autumn colostrum.",
+    "Isoleucine": "The paper reports isoleucine as more abundant in autumn colostrum."
+  },
+  "composition": {
+    "classes": [
+      [
+        "Lipids and lipid-like molecules",
+        46.44
+      ],
+      [
+        "Organic acids and derivatives",
+        24.44
+      ],
+      [
+        "Organic oxygen and nitrogen compounds",
+        9.67
+      ],
+      [
+        "Organoheterocyclic compounds",
+        8.4
+      ],
+      [
+        "Benzenoids",
+        3.93
+      ],
+      [
+        "Nucleosides and nucleotides",
+        3.72
+      ],
+      [
+        "Others",
+        3.4
+      ]
+    ],
+    "lipids": [
+      [
+        "Glycerophospholipids",
+        32
+      ],
+      [
+        "Fatty acyls",
+        25
+      ],
+      [
+        "Steroids and derivatives",
+        21
+      ],
+      [
+        "Prenol lipids",
+        10
+      ],
+      [
+        "Glycerolipids",
+        8
+      ],
+      [
+        "Sphingolipids",
+        3
+      ]
+    ]
+  },
+  "figures": [
+    {
+      "file": "figure-1.jpg",
+      "title": "Figure 1",
+      "caption": "Diagrammatic representation of the average bovine colostrum metabolome profile, with the class and subclass identities, of autumn- and spring-calving dairy cows. The number of metabolites belonging to each class is labelled in percentage."
+    },
+    {
+      "file": "figure-2.jpg",
+      "title": "Figure 2",
+      "caption": "Multivariate analysis of the metabolome of bovine colostrum collected from autumn and spring-calving dairy cows. A) PCA score scatter plot and B) OPLS-DA score scatter plot. The numbers adjacent to the samples denote the week numbers of the sample collection. Autumn samples constituted of those collected in September and October demonstrate a higher intragroup variability, while spring samples collected through January, February, and March cluster together indicating little intragroup metabolic shifts in spring."
+    },
+    {
+      "file": "figure-3.jpg",
+      "title": "Figure 3",
+      "caption": "Heatmap representing the lipid metabolites (VIP ≥ 1.0) significantly upregulated or downregulated in autumn (September and October) and spring bovine colostrum."
+    },
+    {
+      "file": "figure-4.jpg",
+      "title": "Figure 4",
+      "caption": "Heatmap of the amino acids and peptide metabolites (VIP ≥ 1.0) significantly upregulated or downregulated in autumn (September and October) and spring bovine colostrum."
+    },
+    {
+      "file": "figure-5.jpg",
+      "title": "Figure 5",
+      "caption": "Biomarker metabolites with AUC ≥ 0.8 capable of differentiating autumn and spring bovine colostrum. AUC – Area Under the Curve."
+    },
+    {
+      "file": "figure-6.jpg",
+      "title": "Figure 6",
+      "caption": "PLS-DA biplot depicting the correlation of discriminatory metabolites of autumn and spring-calving bovine colostrum with the chosen inherent and external variables. GRA- Grass; SIL- Silage; EBI- Economic Breeding index; TG- Triglyceride; PC- Phosphocholine; UDP- Uridine 5′-diphosphate."
+    }
+  ],
+  "table1_note": "Why only one bar points to spring: Table 1 lists metabolites that passed three filters at once, a VIP above 1 in the OPLS-DA model, a fold change of at least 2 in either direction, and p < 0.05. Spring colostrum also had metabolites at higher levels, but with smaller differences. The paper reports that most phosphatidylcholines (Figure 3) and the triglycerides were higher in spring, linked to the grass-silage diet.",
+  "group": "colostrum-lcms"
+}
