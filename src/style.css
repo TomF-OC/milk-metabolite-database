@@ -334,3 +334,5 @@ button.linkish { background: none; border: 0; padding: 0; font: inherit; color: 
 .season-panel .sub-title { margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 1.15rem; }
 .season-panel .muted { max-width: none; }
 .note-box.wide { max-width: none; margin-bottom: 14px; }
+/* page headers: intro text and citation run the full page width */
+.page-head .lede, .page-head .cite { max-width: none; }
