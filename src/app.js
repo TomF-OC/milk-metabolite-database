@@ -300,7 +300,18 @@
       const H = 120;
       node.replaceChildren();
       const svg = d3.select(node).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('preserveAspectRatio', 'none');
-      if (s.kind === 'properties') {
+      if (s.kind === 'comparison') {
+        // overview volcano: every metabolite, Table 1 metabolites highlighted
+        svg.attr('preserveAspectRatio', 'xMidYMid meet');
+        const pts = (s.preview_pts || []).slice().sort((a, b) => a[2] - b[2]);
+        const ex = Math.max(1.5, d3.max(pts, (d) => Math.abs(d[0])));
+        const x = d3.scaleLinear([-ex, ex], [8, W - 8]), y = d3.scaleLinear([0, d3.max(pts, (d) => d[1]) || 1], [H - 14, 6]);
+        svg.append('line').attr('x1', x(0)).attr('x2', x(0)).attr('y1', 4).attr('y2', H - 14).style('stroke', 'var(--line)');
+        svg.append('text').attr('class', 'mono').attr('x', 8).attr('y', H - 2).style('font-size', '10px').text('← higher in spring');
+        svg.append('text').attr('class', 'mono').attr('x', W - 8).attr('y', H - 2).attr('text-anchor', 'end').style('font-size', '10px').text('higher in autumn →');
+        svg.selectAll('circle').data(pts).join('circle').attr('cx', (d) => x(d[0])).attr('cy', (d) => y(d[1])).attr('r', (d) => (d[2] ? 3.2 : 1.8))
+          .style('fill', (d) => (d[2] ? (d[0] >= 0 ? 'var(--pos)' : 'var(--neg)') : 'var(--muted)')).style('fill-opacity', (d) => (d[2] ? 1 : 0.35));
+      } else if (s.kind === 'properties') {
         const ps = s.props.slice().sort((a, b) => d3.max(b.rows, (r) => Math.abs(Math.log2(r.rel))) - d3.max(a.rows, (r) => Math.abs(Math.log2(r.rel)))).slice(0, 5);
         const x = d3.scaleLinear([0, s.levels.length - 1], [4, W - 4]);
         const ext = d3.max(ps, (p) => d3.max(p.rows, (r) => Math.abs(Math.log2(r.rel))));
@@ -412,6 +423,12 @@
       if (!m.studies.includes(s.id)) continue;
       const box = el('div');
       box.append(el('span', null, s.short));
+      if (s.kind === 'comparison') {
+        const c = s.card_links && s.card_links[m.m];
+        box.append(el('b', 'pred', 'Detected in colostrum'));
+        viz.append(box);
+        continue;
+      }
       if (s.kind === 'properties') {
         const n = s.models.filter((md) => md.terms.some((t) => t.x === m.m && t.type === 'metabolite')).length;
         box.append(el('b', 'pred', `Candidate predictor · ${n} propert${n === 1 ? 'y' : 'ies'}`));
@@ -933,6 +950,151 @@
     inView(hnode, () => heat.draw(false));
   }
 
+  // ------------------------------------------------------------ comparison study page (two seasons, untargeted LC-MS)
+  function comparisonPage(s) {
+    const SC = [...new Set(s.table1.map((r) => r.sc))];
+    const scCol = (sc) => `var(--k${(SC.indexOf(sc) % 8) + 1})`;
+    const st = { sel: (s.roc && s.roc[0] && s.roc[0].ds) || (s.table1[0] && s.table1[0].ds), data: null };
+    const pick = (ds, scroll) => { st.sel = ds; showSel(true); if (scroll) $('#cx-explore').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth' }); };
+
+    // differential metabolites (Table 1)
+    legend($('#df-legend'), SC.map((c) => [c, scCol(c)]));
+    const df = divBars($('#df-chart'), { label: 'Fold change, autumn versus spring', rowH: 26, valueLabels: (d) => `${d.fcl}×`, valueSample: ['4.939×'],
+      fill: (d) => scCol(d.sc), tipText: (d) => `${d.fcl}× in autumn vs spring · p adj ${d.p} · ${d.cc}`, onPick: (d) => pick(d.ds, true),
+      scale: (e) => [{ v: -e, l: '← higher in spring' }, { v: e, l: 'higher in autumn →' }] });
+    const dfItems = s.table1.map((r) => ({ label: r.m, v: Math.log2(r.fc), fcl: r.fcl, p: r.p, cc: r.cc, sc: r.sc, ds: r.ds })).sort((a, b) => b.v - a.v);
+    inView($('#df-chart'), () => df.set(dfItems, d3.max(dfItems, (d) => Math.abs(d.v)) * 1.08, false));
+
+    // biomarker AUCs
+    const anode = $('#auc-chart');
+    if (anode && s.roc && s.roc.length) {
+      let first = true;
+      const auc = mount(anode, (W) => {
+        const rowH = 38, top = 10, H = top + s.roc.length * rowH + 30;
+        anode.style.setProperty('--h', H + 'px');
+        anode.replaceChildren();
+        const svg = d3.select(anode).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Biomarker AUC with confidence intervals');
+        const narrow = W < 520;
+        const lw = narrow ? 0 : Math.min(measure(svg, s.roc.map((r) => r.m)), 260);
+        const x = d3.scaleLinear([0.5, 1], [lw + 16, W - 56]);
+        const ticks = [0.5, 0.6, 0.7, 0.8, 0.9, 1];
+        svg.append('g').selectAll('line').data(ticks).join('line').attr('class', (d) => (d === 0.8 ? 'axis-l' : 'grid-l')).attr('x1', x).attr('x2', x).attr('y1', top - 4).attr('y2', H - 24).attr('stroke-dasharray', (d) => (d === 0.8 ? '4 3' : null));
+        svg.append('g').selectAll('text').data(ticks).join('text').attr('class', 'mono').attr('x', x).attr('y', H - 8).attr('text-anchor', 'middle').text((d) => d.toFixed(1));
+        const intro = first && !reduce; first = false;
+        const g = svg.append('g').selectAll('g').data(s.roc).join('g').attr('transform', (d, i) => `translate(0,${top + i * rowH})`).style('cursor', 'pointer')
+          .on('click', (ev, d) => pick(d.ds, true))
+          .on('mousemove', (ev, d) => tip.show(d.m, [{ text: `AUC ${d.auc} (95% CI ${d.lo}–${d.hi})` }, { text: `Cut-off ${d.cut}: specificity ${d.spec}, sensitivity ${d.sens}` }], ev)).on('mouseleave', tip.hide);
+        g.append('rect').attr('x', 0).attr('width', W).attr('height', rowH).style('fill', 'transparent');
+        g.append('text').attr('class', 'strong').attr('x', narrow ? x(0.5) : lw + 4).attr('y', narrow ? 9 : rowH / 2).attr('dy', '0.32em').attr('text-anchor', narrow ? 'start' : 'end').text((d) => d.m);
+        const cy = narrow ? rowH - 12 : rowH / 2;
+        g.append('line').attr('y1', cy).attr('y2', cy).style('stroke', 'var(--accent)').attr('stroke-width', 2.5).attr('stroke-linecap', 'round')
+          .attr('x1', (d) => x(intro ? d.auc : d.lo)).attr('x2', (d) => x(intro ? d.auc : d.hi))
+          .transition().delay((d, i) => (intro ? 120 * i : 0)).duration(intro ? D(600) : 0).attr('x1', (d) => x(d.lo)).attr('x2', (d) => x(d.hi));
+        g.append('circle').attr('cx', (d) => x(d.auc)).attr('cy', cy).attr('r', 6).style('fill', 'var(--accent)').style('stroke', 'var(--surface)').attr('stroke-width', 2);
+        g.append('text').attr('class', 'mono').attr('x', (d) => x(d.hi) + 8).attr('y', cy).attr('dy', '0.32em').text((d) => d.auc.toFixed(3));
+      });
+      inView(anode, () => auc.draw(false));
+    }
+
+    // per-sample intensities exactly as published in the supplementary data (no statistics added)
+    const snode = $('#strip-chart'), q = $('#cx-q'), status = $('#cx-status');
+    const GL = s.group_labels, GC = (i) => [`var(--t2)`, `var(--t3)`, `var(--t4)`][i % 3];
+    let byName = new Map(), strip = null, markVol = () => {};
+    const t1by = new Map(s.table1.map((r) => [r.ds, r]));
+    function showSel(anim) {
+      if (!st.data) return;
+      const m = byName.get(st.sel); if (!m) return;
+      q.value = m.n;
+      $('#cx-title').textContent = m.n;
+      const chips = [];
+      const t = t1by.get(m.n);
+      if (t) chips.push(el('span', 'chip sig', `Table 1: ${t.fcl}× autumn vs spring · adj. p ${t.p === '0.000' ? '<0.001' : t.p}`));
+      if (m.f) chips.push(el('span', 'chip', m.f));
+      if (m.a) chips.push(el('span', 'chip', m.a));
+      if (m.s != null) chips.push(el('span', 'chip', `Annotation score ${m.s}`));
+      if (m.rsd != null) chips.push(el('span', 'chip', `QC RSD ${m.rsd}%`));
+      const card = [...metBy.values()].find((x) => s.card_links && s.card_links[x.m] && s.card_links[x.m].ds === m.n);
+      if (card) chips.push(Object.assign(el('a', 'chip link', `Open ${card.m}'s MetaBó-Card →`), { href: `${ROOT}metabolites/${card.slug}.html` }));
+      $('#cx-chips').replaceChildren(...chips);
+      strip && strip.draw(anim);
+      markVol();
+    }
+    function initExplorer(data) {
+      st.data = data;
+      byName = new Map(data.mets.map((m) => [m.n, m]));
+      $('#cx-list').replaceChildren(...data.mets.map((m) => new Option(m.n)));
+      status.textContent = `${data.mets.length} metabolites · ${data.samples.length} samples`;
+      const go = () => { if (byName.has(q.value)) { st.sel = q.value; showSel(true); } };
+      q.addEventListener('change', go); q.addEventListener('input', go);
+      const gi = data.samples.map((sm) => data.groups.indexOf(sm.g));
+      strip = mount(snode, (W, anim) => {
+        const m = byName.get(st.sel); if (!m) return;
+        const H = 330;
+        const { svg, fresh } = svgIn(snode, W, H, `Intensity of ${m.n} in each sample`);
+        if (fresh) ['grid', 'yl', 'xl', 'dots'].forEach((c) => layer(svg, c));
+        const vals = m.v.map((v, i) => ({ v, g: gi[i], s: data.samples[i] })).filter((d) => d.v != null);
+        const lo = d3.min(vals, (d) => d.v), hi = d3.max(vals, (d) => d.v);
+        const y = d3.scaleLinear([lo - 0.1, hi + 0.1], [H - 30, 10]).nice();
+        const x = d3.scaleBand(d3.range(data.groups.length), [52, W - 6]).padding(0.2);
+        const dur = anim && !fresh ? D(650) : 0;
+        const tf = (d) => d3.format('.2s')(Math.pow(10, d));
+        layer(svg, 'grid').selectAll('line').data(y.ticks(5)).join('line').attr('class', 'grid-l').attr('x1', 52).attr('x2', W - 6).transition().duration(dur).attr('y1', y).attr('y2', y);
+        layer(svg, 'yl').selectAll('text').data(y.ticks(5)).join('text').attr('x', 46).attr('dy', '0.32em').attr('text-anchor', 'end').text(tf).transition().duration(dur).attr('y', y);
+        layer(svg, 'xl').selectAll('text').data(data.groups).join('text').attr('class', 'strong').attr('text-anchor', 'middle').attr('x', (g, i) => x(i) + x.bandwidth() / 2).attr('y', H - 10)
+          .text((g, i) => `${W < 480 ? GL[i].replace('Autumn · ', 'Aut. ') : GL[i]} (${gi.filter((k) => k === i).length})`);
+        const jit = (k) => ((Math.sin(k * 12.9898) * 43758.5453) % 1 + 1) % 1;
+        layer(svg, 'dots').selectAll('circle').data(vals, (d) => d.s.id).join('circle').attr('r', 3.6).style('fill', (d) => GC(d.g)).style('fill-opacity', 0.85).style('stroke', 'var(--surface)').attr('stroke-width', 0.8)
+          .attr('cx', (d) => x(d.g) + x.bandwidth() * (0.1 + 0.8 * jit(+d.s.id.replace(/\D/g, ''))))
+          .on('mousemove', (ev, d) => tip.show(`${d.s.id} · ${GL[d.g]}`, [{ color: GC(d.g), text: `Intensity ${d3.format('.3s')(Math.pow(10, d.v))}` }, { text: `Week ${d.s.week} · ${d.s.feed} · parity ${d.s.parity} · EBI ${d.s.ebi}` }], ev)).on('mouseleave', tip.hide)
+          .transition().duration(dur).attr('cy', (d) => y(d.v));
+      });
+      inView(snode, () => showSel(false));
+      // overview volcano: every metabolite; Table 1 metabolites highlighted
+      const vnode = $('#vol-chart');
+      if (vnode) {
+        let vgeo = null;
+        const vol = mount(vnode, (W) => {
+          const H = Math.round(Math.min(420, Math.max(300, W * 0.8)));
+          vnode.style.setProperty('--h', H + 'px');
+          vnode.replaceChildren();
+          const svg = d3.select(vnode).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Volcano plot of all metabolites, Table 1 metabolites highlighted');
+          const pts = data.mets.filter((m) => m.vx != null).map((m) => ({ m, x: m.vx, y: m.vy, t: t1by.get(m.n) })).sort((a, b) => !!a.t - !!b.t);
+          const ex = Math.max(2, Math.ceil(d3.max(pts, (d) => Math.abs(d.x))));
+          const x = d3.scaleLinear([-ex, ex], [36, W - 8]), y = d3.scaleLinear([0, Math.ceil(d3.max(pts, (d) => d.y))], [H - 30, 10]).nice();
+          svg.append('g').selectAll('line').data(d3.range(-ex, ex + 1)).join('line').attr('class', (d) => (d ? 'grid-l' : 'axis-l')).attr('x1', x).attr('x2', x).attr('y1', 10).attr('y2', H - 30);
+          svg.append('g').selectAll('text').data(d3.range(-ex, ex + 1)).join('text').attr('x', x).attr('y', H - 14).attr('text-anchor', 'middle').text((d) => fold(d));
+          svg.append('g').selectAll('text').data(y.ticks(5)).join('text').attr('x', 30).attr('y', y).attr('dy', '0.32em').attr('text-anchor', 'end').text((d) => (d ? `1e-${d}` : '1'));
+          svg.append('line').attr('class', 'axis-l').attr('stroke-dasharray', '3 3').attr('x1', 36).attr('x2', W - 8).attr('y1', y(-Math.log10(0.05))).attr('y2', y(-Math.log10(0.05)));
+          svg.append('text').attr('class', 'mono').attr('x', W - 10).attr('y', y(-Math.log10(0.05)) - 4).attr('text-anchor', 'end').text('p = 0.05');
+          svg.append('text').attr('x', 38).attr('y', H - 1).attr('class', 'muted-t').text('← higher in spring');
+          svg.append('text').attr('x', W - 8).attr('y', H - 1).attr('text-anchor', 'end').attr('class', 'muted-t').text('higher in autumn →');
+          svg.append('g').selectAll('circle').data(pts).join('circle').attr('cx', (d) => x(d.x)).attr('cy', (d) => y(d.y))
+            .attr('r', (d) => (d.t ? 4.8 : 2.6)).style('fill', (d) => (d.t ? scCol(d.t.sc) : 'var(--muted)')).style('fill-opacity', (d) => (d.t ? 1 : 0.35))
+            .style('stroke', (d) => (d.t ? 'var(--surface)' : 'none')).style('cursor', 'pointer')
+            .on('mousemove', (ev, d) => tip.show(d.m.n, d.t ? [{ color: scCol(d.t.sc), text: `Table 1: ${d.t.fcl}× autumn vs spring` }, { text: `adjusted p ${d.t.p === '0.000' ? '<0.001' : d.t.p}` }] : [{ text: 'Not in Table 1' }], ev)).on('mouseleave', tip.hide)
+            .on('click', (ev, d) => { st.sel = d.m.n; showSel(true); });
+          svg.append('g').attr('class', 'vsel');
+          vgeo = { x, y, svg };
+          vol.mark();
+        });
+        vol.mark = () => {
+          if (!vgeo) return;
+          const m = byName.get(st.sel); if (!m || m.vx == null) { vgeo && vgeo.svg.select('g.vsel').selectAll('circle').remove(); return; }
+          vgeo.svg.select('g.vsel').selectAll('circle').data([m]).join('circle').attr('r', 9).style('fill', 'none').style('stroke', 'var(--ink)').attr('stroke-width', 1.75)
+            .attr('cx', vgeo.x(m.vx)).attr('cy', vgeo.y(m.vy));
+        };
+        markVol = () => vol.mark();
+        inView(vnode, () => vol.draw(false));
+      }
+    }
+    if (snode) {
+      inView(snode, () => {
+        fetch(`${ROOT}assets/${s.id}.json`).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(initExplorer)
+          .catch(() => { status.textContent = 'The sample data could not be loaded.'; });
+      });
+    }
+  }
+
   // ------------------------------------------------------------ metabolite page
   function metabolitePage(name) {
     document.querySelectorAll('[data-mc-chart]').forEach((node) => {
@@ -969,6 +1131,6 @@
     if (MB.cross && $('#cross-chart')) crossChart($('#cross-chart'), MB.cross);
   }
   const ex = $('#explorer'); if (ex) explorer(ex);
-  if (page === 'study') { const s = study(body.dataset.study); if (s.kind === 'properties') propertiesPage(s); else if (s.kind === 'factorial') factorialPage(s); else timecoursePage(s); }
+  if (page === 'study') { const s = study(body.dataset.study); if (s.kind === 'comparison') comparisonPage(s); else if (s.kind === 'properties') propertiesPage(s); else if (s.kind === 'factorial') factorialPage(s); else timecoursePage(s); }
   if (page === 'metabolite') metabolitePage(body.dataset.met);
 })();

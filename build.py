@@ -58,6 +58,8 @@ def folder_studies():
     for base, visible in ((SRC / "studies", True), (ROOT / "drafts", False)):
         for f in sorted(base.glob("*/study.json")) if base.exists() else []:
             st = json.loads(f.read_text(encoding="utf-8"))
+            if any(o["id"] == st.get("id") for o in out):
+                continue  # a published copy in src/studies wins over a leftover draft with the same id
             st["_dir"] = f.parent
             st.setdefault("visible", visible)
             if base.name == "drafts":
@@ -118,12 +120,88 @@ def load_properties(st):
     return d
 
 
+def load_comparison(st):
+    """A 'comparison' study: two seasons compared by untargeted metabolomics.
+    Reads the paper's supplementary workbook (QC, per-sample intensities, sample metadata),
+    the paper's Table 1 (table1.csv) and the biomarker ROC results (roc.csv)."""
+    base = st["_dir"]
+    d = {k: v for k, v in st.items() if not k.startswith("_")}
+    wbx = openpyxl.load_workbook(base / st.get("supplementary", "supplementary.xlsx"), read_only=True, data_only=True)
+    sheets = {ws.title.split(".")[0].strip(): ws for ws in wbx.worksheets}
+    qrows = list(sheets["S1"].iter_rows(values_only=True))
+    rsd_col = next(i for i, h in enumerate(qrows[0]) if h and "RSD" in str(h))
+    qc = {r[0]: r[rsd_col] for r in qrows[1:] if r[0]}
+    mrows = list(sheets["S3"].iter_rows(values_only=True))
+    mh = [str(h).strip() if h else "" for h in mrows[0]]
+    samples = []
+    for r in mrows[1:]:
+        if not r[0]:
+            continue
+        rec = dict(zip(mh, r))
+        samples.append({"id": r[0], "g": rec.get("Group"), "week": rec.get("Week number"), "feed": rec.get("Feed"),
+                        "temp": rec.get("Mean Temperature"), "ebi": rec.get("EBI"), "parity": rec.get("Parity")})
+    srow = {s["id"]: s for s in samples}
+    drows = list(sheets["S2"].iter_rows(values_only=True))
+    head = drows[0]
+    cols = [(i, h) for i, h in enumerate(head) if h and str(h).startswith("Sample") and h in srow]
+    order = [h for i, h in cols]
+    samples = [srow[h] for h in order]
+    groups = list(st.get("groups", {}).keys()) or sorted({s["g"] for s in samples})
+    gi = {g: [s["g"] == g for s in samples] for g in groups}
+    # published per-sample intensities; vx/vy only place the dots on the overview volcano plot
+    # (mean autumn / mean spring, and Welch's t-test on log2 intensities; labelled as such on the page)
+    from scipy import stats
+    spring = groups[-1]
+    is_aut = np.array([s["g"] != spring for s in samples])
+    mets = []
+    for r in drows[1:]:
+        if not r[0]:
+            continue
+        v = [float(r[i] or 0) for i, h in cols]
+        a, b = np.array(v)[is_aut], np.array(v)[~is_aut]
+        fc = a.mean() / b.mean() if b.mean() > 0 and a.mean() > 0 else None
+        la, lb = np.log2(np.maximum(a, 1)), np.log2(np.maximum(b, 1))
+        p = float(stats.ttest_ind(la, lb, equal_var=False).pvalue) if la.std() + lb.std() > 0 else 1.0
+        mets.append({"n": r[0], "f": r[5], "a": r[3], "s": r[1], "rsd": round(float(qc.get(r[0])), 1) if qc.get(r[0]) is not None else None,
+                     "vx": round(math.log2(fc), 3) if fc else None, "vy": round(-math.log10(max(p, 1e-30)), 3),
+                     "v": [round(math.log10(x), 3) if x > 0 else None for x in v]})
+    t1 = list(csv.DictReader(open(base / st.get("table1", "table1.csv"), encoding="utf-8")))
+    roc = list(csv.DictReader(open(base / st.get("roc", "roc.csv"), encoding="utf-8"))) if (base / st.get("roc", "roc.csv")).exists() else []
+    d["table1"] = [{"m": r["metabolite"], "ds": r["dataset_name"], "sc": r["superclass"], "cc": r["chemical_class"], "fc": float(r["fold_change"]),
+                    "fcl": r["fold_change"], "p": r["p_adjusted"], "ip": r["intragroup_p"]} for r in t1]
+    d["roc"] = [{"m": r["metabolite"], "ds": r["dataset_name"], "auc": float(r["auc"]), "lo": float(r["ci_low"]), "hi": float(r["ci_high"]),
+                 "cut": r["cutoff"], "spec": r["specificity"], "sens": r["sensitivity"]} for r in roc]
+    d["group_ids"] = groups
+    d["group_labels"] = [st.get("groups", {}).get(g, [g, ""])[0] for g in groups]
+    d["group_feed"] = [st.get("groups", {}).get(g, ["", ""])[1] for g in groups]
+    d["n_samples"] = len(samples)
+    d["n_group"] = {g: sum(gi[g]) for g in groups}
+    d["n_mets"] = len(mets)
+    d["_mets"] = mets
+    d["_samples"] = samples
+    cn = st.get("card_names", {})
+    by = {m["n"]: m for m in mets}
+    d["card_links"] = {cn[k]: {"ds": k} for k in cn if k in by}
+    t1n = {r["dataset_name"] for r in t1}
+    d["preview_pts"] = [[m["vx"], m["vy"], 1 if m["n"] in t1n else 0] for m in mets if m["vx"] is not None]
+    d["metabolites"] = sorted(d["card_links"].keys(), key=str.lower)
+    d["rows"] = []
+    fig = lambda f: dict(f, file=f"figures/{st['id']}/{f['file']}")
+    d["figures"] = [fig(f) for f in st.get("figures", [])]
+    if st.get("design_figure"):
+        d["design_figure"] = fig(st["design_figure"])
+    return d
+
+
 studies = []
 for st in ALL:
     if st in HIDDEN:
         continue
     if st["kind"] == "properties":
         studies.append(load_properties(st))
+        continue
+    if st["kind"] == "comparison":
+        studies.append(load_comparison(st))
         continue
     rows = sheet_rows(st)
     d = dict(st)
@@ -207,7 +285,7 @@ def pca(labels, mets, cell):
 
 
 for s in studies:
-    if s["kind"] == "properties":
+    if s["kind"] in ("properties", "comparison"):
         continue
     if s["kind"] == "timecourse":
         cell = {(r["t"], r["m"]): r["mean"] for r in s["rows"]}
@@ -294,6 +372,15 @@ def fig_html(root, f, cls="fig"):
 SHOW_DL = CFG.get("show_downloads", True) is not False  # "show_downloads": false in site.json hides every CSV download
 downloads = []
 for s in studies:
+    if s["kind"] == "comparison":
+        fn = f"{s['id']}_differential.csv"
+        with open(OUT / "data" / fn, "w", newline="", encoding="utf-8") as fh:
+            w = csv.writer(fh)
+            w.writerow(["metabolite", "chemical_class", "fold_change_autumn_vs_spring", "p_adjusted"])
+            for r in s["table1"]:
+                w.writerow([r["m"], r["cc"], r["fcl"], r["p"]])
+        downloads.append((s, fn, "Differential metabolites between autumn and spring colostrum (Table 1 of the paper)."))
+        continue
     if s["kind"] == "properties":
         fn = f"{s['id']}_monthly.csv"
         with open(OUT / "data" / fn, "w", newline="", encoding="utf-8") as fh:
@@ -349,13 +436,16 @@ with open(OUT / "data" / "metabolites.csv", "w", newline="", encoding="utf-8") a
 downloads.append((None, "metabolites.csv", "Metabolite list with class, a short description and the studies that measured it."))
 
 payload = {
-    "studies": [{k: v for k, v in s.items() if k not in ("sheet", "season_sheet", "property_labels", "data", "predictors", "intro", "design", "findings", "figures", "design_figure", "rows")} if s["kind"] == "properties" else {k: v for k, v in s.items() if k not in ("sheet", "season_sheet")} for s in studies],
+    "studies": [{k: v for k, v in s.items() if not k.startswith("_") and k not in ("intro", "design", "findings", "figures", "design_figure", "card_names", "card_notes", "supplementary", "table1_file")} if s["kind"] == "comparison" else {k: v for k, v in s.items() if k not in ("sheet", "season_sheet", "property_labels", "data", "predictors", "intro", "design", "findings", "figures", "design_figure", "rows")} if s["kind"] == "properties" else {k: v for k, v in s.items() if k not in ("sheet", "season_sheet")} for s in studies],
     "mets": [{"m": m, "slug": slug(m), "cls": meta[m]["class"], "role": meta[m]["short"], "mbb": meta[m].get("mbb_id", ""),
               "vip": [s.get("vip_label", "Key marker") for s in studies if m in s.get("vip_metabolites", [])],
               "studies": [s["id"] for s in studies if m in s["metabolites"]]} for m in all_mets],
     "classes": classes,
     "cross": cross,
 }
+for s in studies:  # large per-sample data is loaded only on the study page
+    if s["kind"] == "comparison":
+        (OUT / "assets" / f"{s['id']}.json").write_text(json.dumps({"groups": s["group_ids"], "samples": s["_samples"], "mets": s["_mets"]}, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 if not SHOW_DL:  # no CSV files on the website at all
     shutil.rmtree(OUT / "data")
     downloads = []
@@ -419,7 +509,18 @@ def cite_block(s):
     return f'<p class="cite">{E(s["citation"])}{doi}{link}</p>'
 
 
+def card_visual(s):
+    """Home-page card picture: "card_image" in a study's config (a file in its figures) replaces the drawn preview."""
+    img = s.get("card_image")
+    if img:
+        src = img if "/" in img else f"figures/{s['id']}/{img}"
+        return f'<div class="study-viz study-img"><img src="{E(src)}" alt="" loading="lazy"></div>'
+    return f'<div class="study-viz" data-study-preview="{s["id"]}" aria-hidden="true"></div>'
+
+
 def study_meta(s):
+    if s["kind"] == "comparison":
+        return f"{s['n_samples']} colostrum samples · {s['n_mets']} metabolites · {s.get('platform', 'LC-MS')}"
     if s["kind"] == "properties":
         return f"{len(s['props'])} milk properties · {len(s['models'])} prediction models · {len(s['metabolites'])} candidate metabolite predictors"
     return f"{len(s['metabolites'])} metabolites · " + (f"{len(s['levels'])} months" if s["kind"] == "timecourse" else f"{len(s['b_levels'])} diets × {len(s['a_levels'])} seasons")
@@ -429,17 +530,17 @@ def study_meta(s):
 n_samples = "533"
 study_cards = "".join(f"""
   <a class="study-card" href="studies/{s['id']}.html" id="card-{s['id']}">
-    <span class="eyebrow">{E(s['short'])}</span>
+    <span class="eyebrow">{E(s['short'])}{(' · ' + E(s['platform'])) if s.get('platform') else ''}</span>
     <h3>{E(s['title'])}</h3>
     <p>{E(s['summary'])}</p>
-    <div class="study-viz" data-study-preview="{s['id']}" aria-hidden="true"></div>
+    {card_visual(s)}
     <span class="study-meta">{study_meta(s)}</span>
   </a>""" for s in studies)
 home = f"""
 <section class="hero">
   <div class="wrap hero-in">
     <div class="hero-text">
-      <p class="eyebrow">Open ¹H-NMR milk metabolomics</p>
+      <p class="eyebrow">{E(CFG.get('eyebrow', 'Open ¹H-NMR milk metabolomics'))}</p>
       <h1>{E(CFG['site_title'])}</h1>
       <p class="lede">{E(CFG['tagline'])}</p>
       <div class="hero-stats">
@@ -596,6 +697,110 @@ def properties_page(s, head):
 </section>"""
 
 
+def comparison_page(s, head):
+    """Study page for a 'comparison' study (two calving seasons, untargeted LC-MS)."""
+    t1 = s["table1"]
+    up = sum(1 for r in t1 if r["fc"] > 1)
+    ng = s["n_group"]
+    gids = s["group_ids"]
+    n_aut = sum(v for k, v in ng.items() if k != gids[-1])
+    tiles = [
+        f'<div class="tile"><b class="num">{s["n_samples"]}</b><span>day-0 colostrum samples: {n_aut} autumn-calving, {ng[gids[-1]]} spring-calving cows</span></div>',
+        f'<div class="tile"><b class="num">{s["n_mets"]}</b><span>metabolites annotated by {E(s.get("platform", "LC-MS"))}</span></div>',
+        f'<div class="tile"><b class="num">{up} of {len(t1)}</b><span>differential metabolites higher in autumn colostrum (fold change ≥ 2)</span></div>',
+    ]
+    if s.get("roc"):
+        tiles.append(f'<div class="tile"><b class="num">{len(s["roc"])}</b><span>candidate biomarkers with AUC above 0.8</span></div>')
+    comp = s.get("composition") or {}
+    comp_html = ""
+    if comp:
+        def bar(items, label):
+            segs = "".join(f'<span class="seg" style="flex:{v};--c:var(--k{i % 8 + 1})" title="{E(n)}: {v}%"></span>' for i, (n, v) in enumerate(items))
+            leg = "".join(f'<li><span class="sw" style="background:var(--k{i % 8 + 1})"></span>{E(n)} <b class="num">{v}%</b></li>' for i, (n, v) in enumerate(items))
+            return f'<p class="sub-h">{label}</p><div class="comp-bar" role="img" aria-label="{E(label)}">{segs}</div><ul class="legend comp-leg">{leg}</ul>'
+        comp_html = f"""
+<section class="wrap block" data-chart="composition">
+  <div class="panel">
+    <div class="panel-head"><h2>What is in the colostrum metabolome</h2><p class="muted">Share of the annotated metabolites in each chemical class, from Figure 1 of the paper.</p></div>
+    {bar(comp.get('classes', []), 'All annotated metabolites')}
+    {bar(comp.get('lipids', []), 'Within lipids and lipid-like molecules') if comp.get('lipids') else ''}
+  </div>
+</section>"""
+    rows = "".join(f'<tr><td>{E(r["m"])}</td><td class="muted">{E(r["cc"])}</td><td class="num">{E(r["fcl"])}</td><td class="{"sig" if pnum(r["p"]) < 0.05 else "ns"}">{E(r["p"])}</td></tr>' for r in t1)
+    roc = ""
+    if s.get("roc"):
+        roc = """
+<section class="wrap block" data-chart="biomarkers" id="biomarkers">
+  <div class="panel">
+    <div class="panel-head"><h2>Candidate biomarkers of calving season</h2><p class="muted">Area under the ROC curve (AUC) with its 95% confidence interval, from Figure 5. An AUC of 1 would separate autumn from spring colostrum perfectly; 0.5 is no better than chance. Click a metabolite to see its values in every sample.</p></div>
+    <div class="chart" id="auc-chart" style="--h:240px"></div>
+  </div>
+</section>"""
+    figs = ""
+    if s.get("figures"):
+        figs = ('<section class="wrap block" id="figures" data-chart="figures"><div class="block-head"><h2>Published figures</h2>'
+                f'<p class="muted">{E(s.get("licence_note", ""))} Click a figure to enlarge it.</p></div><div class="fig-grid wide">'
+                + "".join(fig_html("../", f) for f in s["figures"]) + "</div></section>")
+    findings = "".join(f"<li>{E(f)}</li>" for f in s.get("findings", []))
+    feeds = "".join(f'<li><b>{E(l)}</b> · {E(f)} · <span class="num">{ng[g]}</span> cows</li>' for g, l, f in zip(gids, s["group_labels"], s["group_feed"]))
+    return head + f"""
+<section class="wrap block">
+  <div class="tiles">{''.join(tiles)}</div>
+</section>
+<section class="wrap block grid2" id="findings">
+  <div class="panel"><div class="panel-head"><h2>Study design</h2></div><p>{E(s.get('design', ''))}</p><ul class="findings groups">{feeds}</ul></div>
+  <div class="panel"><div class="panel-head"><h2>Key findings</h2></div><ul class="findings">{findings}</ul></div>
+</section>
+{comp_html}
+<section class="wrap block" data-chart="differential" id="differential">
+  <div class="panel">
+    <div class="panel-head"><h2>Differential metabolites, autumn versus spring</h2><p class="muted">The {len(t1)} metabolites in Table 1 of the paper: fold change in autumn colostrum relative to spring (log scale), with adjusted p-values. Click a bar to see that metabolite in every sample.</p></div>
+    <ul class="legend" id="df-legend"></ul>
+    <div class="chart" id="df-chart" style="--h:640px"></div>
+    <p class="muted small note-box">{E(s.get('table1_note', ''))}</p>
+  </div>
+</section>
+{roc}
+<section class="wrap block" data-chart="explorer" id="cx-explore">
+  <div class="panel">
+    <div class="panel-head"><h2>Explore all {s['n_mets']} metabolites</h2><p class="muted">Click a dot on the volcano plot, or search, to see that metabolite's intensity in every one of the {s['n_samples']} colostrum samples, exactly as published in the paper's supplementary data (UHPLC-HRMS peak intensity, log scale). Each dot on the right is one cow.</p></div>
+    <div class="controls"><label for="cx-q">Metabolite</label><input id="cx-q" type="search" list="cx-list" placeholder="Search {s['n_mets']} metabolites" autocomplete="off"><datalist id="cx-list"></datalist><span class="muted" id="cx-status">Loading data…</span></div>
+    <div class="grid2 inner">
+      <div>
+        <div class="chart" id="vol-chart" style="--h:380px"></div>
+        <p class="muted small note-box">Highlighted dots are the {len(t1)} metabolites the paper reports in Table 1: those that met all three of its criteria (VIP above 1 in the OPLS-DA model, a fold change of at least 2, and p &lt; 0.05). Grey dots are the other annotated metabolites. To show the overall pattern, every dot is placed by this site from the published intensities (across: mean autumn ÷ mean spring; up: unadjusted p-value from Welch's t-test on log-transformed intensities). The paper's own values are in Table 1, so a few dots can sit slightly differently from the published figures.</p>
+      </div>
+      <div>
+        <p class="sub-h" id="cx-title">Selected metabolite</p>
+        <div class="chips" id="cx-chips"></div>
+        <div class="chart" id="strip-chart" style="--h:330px"></div>
+      </div>
+    </div>
+  </div>
+</section>
+{figs}
+<section class="wrap block" data-chart="table">
+  <div class="panel">
+    <div class="panel-head"><h2>Table 1 · differential metabolites</h2><p class="muted">Fold change is autumn ÷ spring; p-values are adjusted, as published.</p></div>
+    <div class="table-wrap"><table class="data compact"><thead><tr><th>Metabolite</th><th>Chemical class</th><th>Fold change</th><th>p adjusted</th></tr></thead><tbody>{rows}</tbody></table></div>
+  </div>
+</section>"""
+
+
+def comparison_card(s, m):
+    c = s["card_links"][m]
+    note = s.get("card_notes", {}).get(m, "")
+    t1 = next((r for r in s["table1"] if r["ds"] == c["ds"]), None)
+    res = f'<p>Listed in Table 1: <b class="num">{E(t1["fcl"])}×</b> in autumn versus spring colostrum (adjusted p {E(t1["p"])}).</p>' if t1 else ""
+    return f"""
+<section class="panel mc-sec" id="{s['id']}">
+  <div class="panel-head"><p class="eyebrow"><a href="../studies/{s['id']}.html">{E(s['short'])}</a> · {E(s.get('platform', 'LC-MS'))}</p><h2>Detected in colostrum</h2>
+  <p class="muted">Annotated as {E(c['ds'])} in day-0 colostrum from autumn- and spring-calving cows, measured by untargeted LC-MS (relative intensities, not concentrations).</p></div>
+  {('<p>' + E(note) + '</p>') if note else ''}{res}
+  <p><a href="../studies/{s['id']}.html#cx-explore">See its value in every colostrum sample →</a></p>
+</section>"""
+
+
 # study pages
 for s in studies:
     root = "../"
@@ -608,7 +813,9 @@ for s in studies:
     {cite_block(s)}
   </div>
 </section>"""
-    if s["kind"] == "properties":
+    if s["kind"] == "comparison":
+        body = comparison_page(s, head)
+    elif s["kind"] == "properties":
         body = properties_page(s, head)
     elif s["kind"] == "factorial":
         diets = "".join(f"""<article class="diet" style="--dc:var(--s{i + 1})"><h3><span class="code">{E(b)}</span> {E(s['level_names'].get(b, b))}</h3><p>{E(s['level_text'].get(b, ''))}</p></article>""" for i, b in enumerate(s["b_levels"]))
@@ -773,6 +980,9 @@ for k, m in enumerate(all_mets):
         if s["kind"] == "properties":
             secs += properties_card(s, m)
             continue
+        if s["kind"] == "comparison":
+            secs += comparison_card(s, m)
+            continue
         if s["kind"] == "factorial":
             rs = [r for r in s["rows"] if r["m"] == m]
             pv = next(p for p in s["pvalues"] if p["m"] == m)
@@ -873,7 +1083,7 @@ body = f"""
   <section class="panel"><div class="panel-head"><h2>How to cite</h2></div><ul class="findings">{cites}</ul>{doi}{lic}{contact}</section>
   <section class="panel"><div class="panel-head"><h2>Notes on the data</h2></div>
   <ul class="findings">
-    <li>Metabolites were identified and quantified by ¹H-NMR spectroscopy.</li>
+    <li>Milk metabolites were identified and quantified by ¹H-NMR spectroscopy (concentrations in mM).{'' if not any(s['kind'] == 'comparison' for s in studies) else ' The colostrum study used untargeted UHPLC-HRMS, which reports relative intensities rather than concentrations.'}</li>
     <li>P-values reported as &lt;0.001 are kept as text in the tables. The interactive charts treat them as the smallest values when sorting.</li>
     <li>The PCA plots on this site are computed from the published group means (log2-transformed, autoscaled) to give an overview. The published analyses used individual samples.</li>
     <li>Metabolite descriptions on the MetaBó-Cards are short general summaries. Follow the HMDB, PubChem, ChEBI and KEGG links for full reference information.</li>

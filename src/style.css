@@ -309,3 +309,14 @@ details.coefs summary { cursor: pointer; font-weight: 600; }
 .dir.up { color: var(--pos); }
 .dir.down { color: var(--neg); }
 .mcard .viz b.pred { display: block; font-size: .78rem; font-weight: 600; color: var(--ink); margin-top: 4px; }
+
+/* comparison study (two seasons, untargeted LC-MS) */
+.comp-bar { display: flex; height: 26px; border-radius: 6px; overflow: hidden; gap: 2px; margin: 6px 0 10px; }
+.comp-bar .seg { background: var(--c); min-width: 3px; }
+.comp-leg { margin-bottom: 18px; }
+.comp-leg b { font-weight: 600; margin-left: 2px; }
+ul.groups li b { font-weight: 600; }
+.note-box { margin-top: 12px; padding: 10px 14px; border-left: 3px solid var(--line); background: var(--sunk); border-radius: 0 6px 6px 0; max-width: 72ch; }
+button.linkish { background: none; border: 0; padding: 0; font: inherit; color: var(--accent); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; text-align: left; }
+.study-img { display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 8px; background: var(--surface); }
+.study-img img { max-height: 120px; width: 100%; object-fit: contain; }
